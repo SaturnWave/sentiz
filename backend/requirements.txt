@@ -1,0 +1,7 @@
+﻿chalice>=1.28.0,<2.0.0
+boto3>=1.19.0,<2.0.0
+pydantic>=1.9.0,<2.0.0
+python-dotenv # Optional: For local development
+PyJWT>=2.0.0,<3.0.0 # For token validation example
+# requests # Add if fetching JWKS keys dynamically in security.py
+# python-jwks-client # If using this library for JWKS
