@@ -1,278 +1,220 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import * as d3 from 'd3';
 
 interface SentimentGaugeProps {
-  positive: number;
-  negative: number;
-  neutral: number;
-  mixed?: number;
-  size?: 'sm' | 'md' | 'lg';
-  showLabels?: boolean;
-  showPercentages?: boolean;
-  className?: string;
+  score: number; // Score between -1 and 1
+  size?: number;
+  showValue?: boolean;
+  label?: string;
+  animated?: boolean;
 }
 
-const GaugeContainer = styled.div<{ size: string }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: ${({ size }) => {
-    switch (size) {
-      case 'sm': return '150px';
-      case 'lg': return '300px';
-      default: return '220px';
-    }
-  }};
+const GaugeContainer = styled.div`
+  position: relative;
+  width: ${props => props.size || 200}px;
+  height: ${props => (props.size || 200) * 0.65}px;
   margin: 0 auto;
 `;
 
-const GaugeTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  text-align: center;
-`;
-
-const GaugeChart = styled.div<{ size: string }>`
-  position: relative;
-  width: 100%;
-  height: ${({ size }) => {
-    switch (size) {
-      case 'sm': return '75px';
-      case 'lg': return '150px';
-      default: return '110px';
-    }
-  }};
-  overflow: hidden;
-`;
-
-const GaugeBackground = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  height: 200%;
-  border-radius: 50%;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  overflow: hidden;
-`;
-
-const GaugeFill = styled.div<{ offset: number; color: string; percentage: number }>`
+const ScoreText = styled.div`
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 100%;
-  height: 200%;
-  border-radius: 50%;
-  background-color: ${({ color }) => color};
-  clip-path: polygon(
-    ${({ offset }) => `${offset}% 100%`},
-    ${({ offset, percentage }) => `${offset + percentage}% 100%`},
-    ${({ offset, percentage }) => `${offset + percentage / 2}% 0%`},
-    ${({ offset }) => `${offset}% 100%`}
-  );
+  right: 0;
+  text-align: center;
+  font-size: ${props => props.theme.typography.fontSizes.xl};
+  font-weight: ${props => props.theme.typography.fontWeights.semibold};
+  color: ${props => props.theme.colors.text.primary};
 `;
 
-const GaugeNeedle = styled.div<{ rotation: number; size: string }>`
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform-origin: bottom center;
-  transform: ${({ rotation }) => `translateX(-50%) rotate(${rotation}deg)`};
-  width: ${({ size }) => {
-    switch (size) {
-      case 'sm': return '2px';
-      case 'lg': return '4px';
-      default: return '3px';
-    }
-  }};
-  height: ${({ size }) => {
-    switch (size) {
-      case 'sm': return '70px';
-      case 'lg': return '140px';
-      default: return '105px';
-    }
-  }};
-  background-color: ${({ theme }) => theme.colors.text.primary};
-  z-index: 1;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: ${({ size }) => {
-      switch (size) {
-        case 'sm': return '10px';
-        case 'lg': return '16px';
-        default: return '12px';
-      }
-    }};
-    height: ${({ size }) => {
-      switch (size) {
-        case 'sm': return '10px';
-        case 'lg': return '16px';
-        default: return '12px';
-      }
-    }};
-    background-color: ${({ theme }) => theme.colors.text.primary};
-    border-radius: 50%;
-  }
-`;
-
-const GaugeLabels = styled.div`
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-top: ${({ theme }) => theme.spacing.sm};
-`;
-
-const GaugeLabel = styled.div<{ type: string }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: ${({ theme, type }) => {
-    switch (type) {
-      case 'positive': return theme.colors.success.main;
-      case 'negative': return theme.colors.error.main;
-      case 'neutral': return theme.colors.text.secondary;
-      case 'mixed': return theme.colors.warning.main;
-      default: return theme.colors.text.primary;
-    }
-  }};
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-`;
-
-const GaugeDot = styled.div<{ type: string }>`
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-  background-color: ${({ theme, type }) => {
-    switch (type) {
-      case 'positive': return theme.colors.success.main;
-      case 'negative': return theme.colors.error.main;
-      case 'neutral': return theme.colors.text.secondary;
-      case 'mixed': return theme.colors.warning.main;
-      default: return theme.colors.text.primary;
-    }
-  }};
-`;
-
-const SentimentScore = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.md};
-  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  color: ${({ theme }) => theme.colors.text.primary};
+const Label = styled.div`
+  text-align: center;
+  font-size: ${props => props.theme.typography.fontSizes.md};
+  color: ${props => props.theme.colors.text.secondary};
+  margin-top: ${props => props.theme.spacing.xs};
 `;
 
 const SentimentGauge: React.FC<SentimentGaugeProps> = ({
-  positive,
-  negative,
-  neutral,
-  mixed = 0,
-  size = 'md',
-  showLabels = true,
-  showPercentages = true,
-  className,
+  score,
+  size = 200,
+  showValue = true,
+  label,
+  animated = true,
 }) => {
-  // Calculate the total to ensure we have percentages
-  const total = useMemo(() => positive + negative + neutral + mixed, [positive, negative, neutral, mixed]);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const normalizedScore = Math.max(-1, Math.min(1, score)); // Ensure score is between -1 and 1
   
-  // Normalize values to percentages
-  const normalizedPositive = (positive / total) * 100;
-  const normalizedNegative = (negative / total) * 100;
-  const normalizedNeutral = (neutral / total) * 100;
-  const normalizedMixed = (mixed / total) * 100;
+  // Map sentiment score to a color
+  const getColor = (score: number) => {
+    if (score < -0.6) return '#c62828'; // Very negative - deep red
+    if (score < -0.2) return '#ef6c00'; // Negative - orange
+    if (score < 0.2) return '#ffca28'; // Neutral - yellow
+    if (score < 0.6) return '#8bc34a'; // Positive - light green
+    return '#2e7d32'; // Very positive - deep green
+  };
   
-  // Calculate sentiment score (ranges from -1 to 1)
-  // We'll use a simple formula here, but this could be adjusted based on specific needs
-  const sentimentScore = useMemo(() => {
-    return ((positive - negative) / total) * 100;
-  }, [positive, negative, total]);
+  // Format score for display
+  const formatScore = (score: number) => {
+    // Convert to percentage and round
+    const percentage = Math.round((score + 1) * 50);
+    return percentage;
+  };
   
-  // Calculate needle rotation (0deg is neutral, -90deg is fully negative, 90deg is fully positive)
-  const needleRotation = useMemo(() => {
-    return (sentimentScore / 100) * 90; // Map the -100 to 100 range to -90 to 90 degrees
-  }, [sentimentScore]);
+  // Map score to gauge position
+  const mapScoreToAngle = (score: number) => {
+    // Map score from [-1, 1] to [0, 180] degrees
+    return (score + 1) * 90;
+  };
+  
+  useEffect(() => {
+    if (!svgRef.current) return;
+    
+    const svg = d3.select(svgRef.current);
+    const width = size;
+    const height = size * 0.65;
+    const radius = Math.min(width, height) * 0.8;
+    const centerX = width / 2;
+    const centerY = height * 0.9;
+    
+    // Clear previous content
+    svg.selectAll('*').remove();
+    
+    // Create gauge background
+    const arcGenerator = d3.arc()
+      .innerRadius(radius * 0.6)
+      .outerRadius(radius)
+      .startAngle(-Math.PI / 2)
+      .endAngle(Math.PI / 2);
+    
+    // Create background arc
+    svg.append('path')
+      .attr('d', arcGenerator as any)
+      .attr('fill', '#e0e0e0')
+      .attr('transform', `translate(${centerX}, ${centerY})`);
+    
+    // Create gradient for gauge
+    const gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'gauge-gradient')
+      .attr('gradientUnits', 'userSpaceOnUse')
+      .attr('x1', 0)
+      .attr('y1', 0)
+      .attr('x2', width)
+      .attr('y2', 0);
+    
+    // Add gradient stops
+    gradient.append('stop').attr('offset', '0%').attr('stop-color', '#c62828'); // Very negative
+    gradient.append('stop').attr('offset', '25%').attr('stop-color', '#ef6c00'); // Negative
+    gradient.append('stop').attr('offset', '50%').attr('stop-color', '#ffca28'); // Neutral
+    gradient.append('stop').attr('offset', '75%').attr('stop-color', '#8bc34a'); // Positive
+    gradient.append('stop').attr('offset', '100%').attr('stop-color', '#2e7d32'); // Very positive
+    
+    // Create colored arc for score
+    const scoreArc = d3.arc()
+      .innerRadius(radius * 0.6)
+      .outerRadius(radius)
+      .startAngle(-Math.PI / 2)
+      .endAngle(-Math.PI / 2 + (Math.PI * (normalizedScore + 1) / 2));
+    
+    // Add colored arc
+    svg.append('path')
+      .attr('d', scoreArc as any)
+      .attr('fill', 'url(#gauge-gradient)')
+      .attr('transform', `translate(${centerX}, ${centerY})`);
+    
+    // Add needle
+    const needleLength = radius * 0.8;
+    const needleRadius = 5;
+    const targetAngle = (-90 + mapScoreToAngle(normalizedScore)) * (Math.PI / 180);
+    
+    // Starting angle (either from the previous position or centered)
+    const startAngle = animated ? -Math.PI / 2 : targetAngle;
+    
+    // Create needle
+    const needle = svg.append('g')
+      .attr('transform', `translate(${centerX}, ${centerY})`);
+    
+    // Add needle circle
+    needle.append('circle')
+      .attr('r', needleRadius * 2)
+      .attr('fill', '#666');
+    
+    // Add needle pointer
+    needle.append('path')
+      .attr('d', `M0,${-needleRadius} L${-needleRadius},0 L0,${needleLength} L${needleRadius},0 Z`)
+      .attr('fill', '#666')
+      .attr('transform', `rotate(${startAngle * (180 / Math.PI)})`);
+    
+    // Animate the needle if animated is true
+    if (animated) {
+      needle.select('path')
+        .transition()
+        .duration(1000)
+        .attrTween('transform', () => {
+          return function(t: number) {
+            const interpolatedAngle = d3.interpolate(startAngle, targetAngle)(t);
+            return `rotate(${interpolatedAngle * (180 / Math.PI)})`;
+          };
+        });
+    }
+    
+    // Add tick marks
+    const ticks = [-1, -0.5, 0, 0.5, 1];
+    const tickLength = radius * 0.1;
+    
+    ticks.forEach(tick => {
+      const angle = (-90 + mapScoreToAngle(tick)) * (Math.PI / 180);
+      const tickStart = radius * 0.6;
+      const tickEnd = radius * 0.6 - tickLength;
+      
+      const x1 = Math.cos(angle) * tickStart;
+      const y1 = Math.sin(angle) * tickStart;
+      const x2 = Math.cos(angle) * tickEnd;
+      const y2 = Math.sin(angle) * tickEnd;
+      
+      svg.append('line')
+        .attr('x1', centerX + x1)
+        .attr('y1', centerY + y1)
+        .attr('x2', centerX + x2)
+        .attr('y2', centerY + y2)
+        .attr('stroke', '#666')
+        .attr('stroke-width', 2);
+      
+      // Add tick labels
+      const labelRadius = tickEnd - 15;
+      const labelX = centerX + Math.cos(angle) * labelRadius;
+      const labelY = centerY + Math.sin(angle) * labelRadius;
+      
+      svg.append('text')
+        .attr('x', labelX)
+        .attr('y', labelY)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', '12px')
+        .attr('fill', '#666')
+        .text(() => {
+          if (tick === -1) return 'Negative';
+          if (tick === 0) return 'Neutral';
+          if (tick === 1) return 'Positive';
+          return '';
+        });
+    });
+    
+  }, [normalizedScore, size, animated]);
   
   return (
-    <GaugeContainer size={size} className={className}>
-      <GaugeTitle>Sentiment Analysis</GaugeTitle>
-      
-      <GaugeChart size={size}>
-        <GaugeBackground>
-          {/* Negative segment */}
-          <GaugeFill 
-            offset={0} 
-            percentage={50} 
-            color={`hsla(0, 100%, 50%, ${normalizedNegative / 200 + 0.1})`} 
-          />
-          
-          {/* Neutral segment */}
-          <GaugeFill 
-            offset={50} 
-            percentage={0.1} 
-            color={`hsla(0, 0%, 60%, ${normalizedNeutral / 100 + 0.2})`} 
-          />
-          
-          {/* Positive segment */}
-          <GaugeFill 
-            offset={50} 
-            percentage={50} 
-            color={`hsla(120, 100%, 50%, ${normalizedPositive / 200 + 0.1})`} 
-          />
-          
-          {/* Mixed sentiment overlay if needed */}
-          {mixed > 0 && (
-            <GaugeFill 
-              offset={25} 
-              percentage={50} 
-              color={`hsla(40, 100%, 50%, ${normalizedMixed / 200})`} 
-            />
-          )}
-        </GaugeBackground>
-        
-        <GaugeNeedle rotation={needleRotation} size={size} />
-      </GaugeChart>
-      
-      {showLabels && (
-        <GaugeLabels>
-          <GaugeLabel type="negative">
-            <GaugeDot type="negative" />
-            Negative
-            {showPercentages && ` (${Math.round(normalizedNegative)}%)`}
-          </GaugeLabel>
-          
-          {mixed > 0 && (
-            <GaugeLabel type="mixed">
-              <GaugeDot type="mixed" />
-              Mixed
-              {showPercentages && ` (${Math.round(normalizedMixed)}%)`}
-            </GaugeLabel>
-          )}
-          
-          <GaugeLabel type="neutral">
-            <GaugeDot type="neutral" />
-            Neutral
-            {showPercentages && ` (${Math.round(normalizedNeutral)}%)`}
-          </GaugeLabel>
-          
-          <GaugeLabel type="positive">
-            <GaugeDot type="positive" />
-            Positive
-            {showPercentages && ` (${Math.round(normalizedPositive)}%)`}
-          </GaugeLabel>
-        </GaugeLabels>
-      )}
-      
-      <SentimentScore>
-        Score: {sentimentScore.toFixed(1)}
-      </SentimentScore>
-    </GaugeContainer>
+    <div>
+      <GaugeContainer size={size}>
+        <svg ref={svgRef} width={size} height={size * 0.65}></svg>
+        {showValue && (
+          <ScoreText>
+            {formatScore(normalizedScore)}%
+          </ScoreText>
+        )}
+      </GaugeContainer>
+      {label && <Label>{label}</Label>}
+    </div>
   );
 };
 

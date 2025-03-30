@@ -1,3 +1,15 @@
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { persistStore, persistReducer } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
+
+// Import all slice reducers
+import authReducer from '../features/auth/slices/authSlice';
+import analysisReducer from '../features/analysis/slices/analysisSlice';
+import historyReducer from '../features/history/slices/historySlice';
+import batchReducer from '../features/batch/slices/batchSlice';
+import ttsReducer from '../features/tts/slices/textToSpeechSlice';
+import uiReducer from '../features/ui/slices/uiSlice';
+
 // Feature flags and configurations
 export const FEATURES = {
     // Core features
@@ -44,3 +56,41 @@ export const FEATURES = {
       CSV_UPLOAD: 'CSV Upload',
     },
   };
+
+// Configure the root reducer
+const rootReducer = combineReducers({
+  auth: authReducer,
+  analysis: analysisReducer,
+  history: historyReducer,
+  batch: batchReducer,
+  tts: ttsReducer,
+  ui: uiReducer,
+});
+
+// Configure persistence
+const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['auth', 'ui'], // Only persist these reducers
+};
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+// Create the Redux store
+export const store = configureStore({
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+      },
+    }),
+  devTools: process.env.NODE_ENV !== 'production',
+});
+
+// Create persistor
+export const persistor = persistStore(store);
+
+// Export RootState and AppDispatch types
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

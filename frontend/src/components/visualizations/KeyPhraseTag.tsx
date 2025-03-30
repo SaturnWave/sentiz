@@ -1,101 +1,95 @@
 import React from 'react';
 import styled from 'styled-components';
 
-export interface KeyPhraseTagProps {
+interface KeyPhraseTagProps {
   text: string;
-  score?: number;
+  score?: number; // Optional score between 0 and 1 representing importance
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
+  isSelected?: boolean;
+  color?: string;
   className?: string;
 }
 
-const TagContainer = styled.div<{
-  score?: number;
+interface TagProps {
   size: 'sm' | 'md' | 'lg';
-  interactive: boolean;
-}>`
+  score?: number;
+  isSelected?: boolean;
+  color?: string;
+  isClickable: boolean;
+}
+
+const TagContainer = styled.div<TagProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: ${({ theme, size }) => {
-    switch (size) {
-      case 'sm':
-        return `${theme.spacing.xs} ${theme.spacing.sm}`;
-      case 'lg':
-        return `${theme.spacing.sm} ${theme.spacing.md}`;
-      default:
-        return `${theme.spacing.xs} ${theme.spacing.md}`;
+  border-radius: ${props => props.theme.borderRadius.full};
+  padding: ${props => {
+    switch (props.size) {
+      case 'sm': return `${props.theme.spacing.xxs} ${props.theme.spacing.xs}`;
+      case 'lg': return `${props.theme.spacing.sm} ${props.theme.spacing.md}`;
+      default: return `${props.theme.spacing.xs} ${props.theme.spacing.sm}`;
     }
   }};
-  margin: ${({ theme }) => theme.spacing.xs};
-  background-color: ${({ theme, score }) => {
-    if (!score) return theme.colors.background.secondary;
+  margin: ${props => props.theme.spacing.xs};
+  background-color: ${props => {
+    if (props.isSelected) {
+      return props.theme.colors.primary.main;
+    }
     
-    // Score is typically between 0 and 1, with 1 being highest confidence
-    if (score > 0.8) return theme.colors.primary.light;
-    if (score > 0.6) return theme.colors.primary.faded;
-    if (score > 0.4) return theme.colors.background.tertiary;
-    return theme.colors.background.secondary;
-  }};
-  color: ${({ theme, score }) => {
-    if (!score) return theme.colors.text.primary;
+    if (props.color) {
+      return props.color;
+    }
     
-    if (score > 0.8) return theme.colors.text.inverse;
-    return theme.colors.text.primary;
+    // If score is provided, use it to determine opacity
+    const baseColor = props.theme.colors.primary.light;
+    const opacity = props.score !== undefined ? 0.3 + (props.score * 0.7) : 1;
+    
+    // Extract RGB components and add alpha
+    const rgbMatch = baseColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    const hexMatch = baseColor.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    
+    if (rgbMatch) {
+      return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${opacity})`;
+    } else if (hexMatch) {
+      const r = parseInt(hexMatch[1], 16);
+      const g = parseInt(hexMatch[2], 16);
+      const b = parseInt(hexMatch[3], 16);
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+    
+    return baseColor;
   }};
-  border-radius: ${({ theme }) => theme.borders.radius.full};
-  font-size: ${({ theme, size }) => {
-    switch (size) {
-      case 'sm':
-        return theme.typography.fontSizes.xs;
-      case 'lg':
-        return theme.typography.fontSizes.md;
-      default:
-        return theme.typography.fontSizes.sm;
+  font-size: ${props => {
+    switch (props.size) {
+      case 'sm': return props.theme.typography.fontSizes.sm;
+      case 'lg': return props.theme.typography.fontSizes.lg;
+      default: return props.theme.typography.fontSizes.md;
     }
   }};
-  white-space: nowrap;
-  cursor: ${({ interactive }) => (interactive ? 'pointer' : 'default')};
+  font-weight: ${props => {
+    // If score is provided, use it to determine font weight
+    if (props.score !== undefined) {
+      // Map score from 0-1 to a range between normal and bold
+      const normalWeight = props.theme.typography.fontWeights.normal;
+      const boldWeight = props.theme.typography.fontWeights.bold;
+      return normalWeight + Math.round((boldWeight - normalWeight) * props.score);
+    }
+    return props.theme.typography.fontWeights.medium;
+  }};
+  color: ${props => props.isSelected ? props.theme.colors.primary.contrastText : props.theme.colors.text.primary};
   transition: all 0.2s ease;
+  cursor: ${props => props.isClickable ? 'pointer' : 'default'};
   user-select: none;
-  font-weight: ${({ theme, score }) => 
-    score && score > 0.8 
-      ? theme.typography.fontWeights.medium 
-      : theme.typography.fontWeights.normal
-  };
   
   &:hover {
-    transform: ${({ interactive }) => (interactive ? 'translateY(-2px)' : 'none')};
-    box-shadow: ${({ interactive, theme }) => 
-      interactive ? theme.shadows.sm : 'none'
-    };
+    transform: ${props => props.isClickable ? 'translateY(-2px)' : 'none'};
+    box-shadow: ${props => props.isClickable ? props.theme.shadows.sm : 'none'};
   }
-`;
-
-const ScoreBadge = styled.span<{ score?: number }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: ${({ theme }) => theme.spacing.xs};
-  padding: ${({ theme }) => `0 ${theme.spacing.xs}`};
-  background-color: ${({ theme, score }) => {
-    if (!score) return theme.colors.background.tertiary;
-    
-    if (score > 0.8) return theme.colors.primary.main;
-    if (score > 0.6) return theme.colors.primary.light;
-    if (score > 0.4) return theme.colors.background.quaternary;
-    return theme.colors.background.tertiary;
-  }};
-  color: ${({ theme, score }) => {
-    if (!score) return theme.colors.text.secondary;
-    
-    if (score > 0.6) return theme.colors.text.inverse;
-    return theme.colors.text.secondary;
-  }};
-  border-radius: ${({ theme }) => theme.borders.radius.full};
-  font-size: ${({ theme }) => theme.typography.fontSizes.xs};
-  min-width: 1.5em;
-  height: 1.5em;
+  
+  &:active {
+    transform: ${props => props.isClickable ? 'translateY(0)' : 'none'};
+  }
 `;
 
 const KeyPhraseTag: React.FC<KeyPhraseTagProps> = ({
@@ -103,21 +97,21 @@ const KeyPhraseTag: React.FC<KeyPhraseTagProps> = ({
   score,
   size = 'md',
   onClick,
+  isSelected = false,
+  color,
   className,
 }) => {
-  // Format score for display - show as percentage
-  const formattedScore = score ? Math.round(score * 100) : undefined;
-
   return (
     <TagContainer
-      score={score}
       size={size}
-      interactive={!!onClick}
+      score={score}
+      isSelected={isSelected}
+      color={color}
+      isClickable={!!onClick}
       onClick={onClick}
       className={className}
     >
       {text}
-      {formattedScore && <ScoreBadge score={score}>{formattedScore}%</ScoreBadge>}
     </TagContainer>
   );
 };
