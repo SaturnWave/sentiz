@@ -1,13 +1,17 @@
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { store, persistor } from './store';
+import AppRoutes from './routes';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AnimationProvider } from './contexts/AnimationContext';
 import { VideoProvider } from './contexts/VideoContext';
-import AppRoutes from './routes';
-import { GlobalStyle } from './styles/globalStyles';
+import { Amplify } from 'aws-amplify';
+import { amplifyConfig } from './config/amplify';
+
+// Configure Amplify
+Amplify.configure(amplifyConfig);
 
 const App: React.FC = () => {
   return (
@@ -16,7 +20,6 @@ const App: React.FC = () => {
         <ThemeProvider>
           <AnimationProvider>
             <VideoProvider>
-              <GlobalStyle />
               <Router>
                 <AppRoutes />
               </Router>
