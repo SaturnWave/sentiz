@@ -3,217 +3,153 @@ import styled from 'styled-components';
 import * as d3 from 'd3';
 
 interface SentimentGaugeProps {
-  score: number; // Score between -1 and 1
-  size?: number;
-  showValue?: boolean;
-  label?: string;
-  animated?: boolean;
+  positive: number;
+  negative: number;
+  neutral: number;
+  mixed: number;
 }
 
 const GaugeContainer = styled.div`
+  width: 100%;
+  height: 200px;
   position: relative;
-  width: ${props => props.size || 200}px;
-  height: ${props => (props.size || 200) * 0.65}px;
-  margin: 0 auto;
 `;
 
-const ScoreText = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: ${props => props.theme.typography.fontSizes.xl};
-  font-weight: ${props => props.theme.typography.fontWeights.semibold};
-  color: ${props => props.theme.colors.text.primary};
+const ScoreList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: ${({ theme }) => theme.spacing.md} 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.md};
 `;
 
-const Label = styled.div`
-  text-align: center;
-  font-size: ${props => props.theme.typography.fontSizes.md};
-  color: ${props => props.theme.colors.text.secondary};
-  margin-top: ${props => props.theme.spacing.xs};
+const ScoreItem = styled.li<{ color: string }>`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: ${({ color }) => color};
+  }
 `;
 
 const SentimentGauge: React.FC<SentimentGaugeProps> = ({
-  score,
-  size = 200,
-  showValue = true,
-  label,
-  animated = true,
+  positive,
+  negative,
+  neutral,
+  mixed,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const normalizedScore = Math.max(-1, Math.min(1, score)); // Ensure score is between -1 and 1
-  
-  // Map sentiment score to a color
-  const getColor = (score: number) => {
-    if (score < -0.6) return '#c62828'; // Very negative - deep red
-    if (score < -0.2) return '#ef6c00'; // Negative - orange
-    if (score < 0.2) return '#ffca28'; // Neutral - yellow
-    if (score < 0.6) return '#8bc34a'; // Positive - light green
-    return '#2e7d32'; // Very positive - deep green
-  };
-  
-  // Format score for display
-  const formatScore = (score: number) => {
-    // Convert to percentage and round
-    const percentage = Math.round((score + 1) * 50);
-    return percentage;
-  };
-  
-  // Map score to gauge position
-  const mapScoreToAngle = (score: number) => {
-    // Map score from [-1, 1] to [0, 180] degrees
-    return (score + 1) * 90;
-  };
   
   useEffect(() => {
     if (!svgRef.current) return;
     
-    const svg = d3.select(svgRef.current);
-    const width = size;
-    const height = size * 0.65;
-    const radius = Math.min(width, height) * 0.8;
-    const centerX = width / 2;
-    const centerY = height * 0.9;
+    // Remove any existing SVG content
+    d3.select(svgRef.current).selectAll('*').remove();
     
-    // Clear previous content
-    svg.selectAll('*').remove();
+    const width = svgRef.current.clientWidth;
+    const height = svgRef.current.clientHeight;
+    const radius = Math.min(width, height) / 2;
     
-    // Create gauge background
-    const arcGenerator = d3.arc()
+    const svg = d3
+      .select(svgRef.current)
+      .append('g')
+      .attr('transform', `translate(${width / 2}, ${height / 2})`);
+    
+    // Create sentiment data
+    const data = [
+      { name: 'Positive', value: positive, color: '#00897b' },
+      { name: 'Negative', value: negative, color: '#d32f2f' },
+      { name: 'Neutral', value: neutral, color: '#757575' },
+      { name: 'Mixed', value: mixed, color: '#ff6f00' },
+    ];
+    
+    // Create pie chart
+    const pie = d3
+      .pie<typeof data[0]>()
+      .value((d) => d.value)
+      .sort(null);
+    
+    const arc = d3
+      .arc<d3.PieArcDatum<typeof data[0]>>()
       .innerRadius(radius * 0.6)
-      .outerRadius(radius)
-      .startAngle(-Math.PI / 2)
-      .endAngle(Math.PI / 2);
+      .outerRadius(radius * 0.9);
     
-    // Create background arc
-    svg.append('path')
-      .attr('d', arcGenerator as any)
-      .attr('fill', '#e0e0e0')
-      .attr('transform', `translate(${centerX}, ${centerY})`);
+    const arcs = svg
+      .selectAll('.arc')
+      .data(pie(data))
+      .enter()
+      .append('g')
+      .attr('class', 'arc');
     
-    // Create gradient for gauge
-    const gradient = svg.append('defs')
-      .append('linearGradient')
-      .attr('id', 'gauge-gradient')
-      .attr('gradientUnits', 'userSpaceOnUse')
-      .attr('x1', 0)
-      .attr('y1', 0)
-      .attr('x2', width)
-      .attr('y2', 0);
+    // Add colored arcs
+    arcs
+      .append('path')
+      .attr('d', arc)
+      .attr('fill', (d) => d.data.color)
+      .attr('stroke', 'rgba(0,0,0,0.2)')
+      .attr('stroke-width', 1)
+      .style('transition', 'opacity 0.3s')
+      .on('mouseover', function() {
+        d3.select(this).style('opacity', 0.8);
+      })
+      .on('mouseout', function() {
+        d3.select(this).style('opacity', 1);
+      });
     
-    // Add gradient stops
-    gradient.append('stop').attr('offset', '0%').attr('stop-color', '#c62828'); // Very negative
-    gradient.append('stop').attr('offset', '25%').attr('stop-color', '#ef6c00'); // Negative
-    gradient.append('stop').attr('offset', '50%').attr('stop-color', '#ffca28'); // Neutral
-    gradient.append('stop').attr('offset', '75%').attr('stop-color', '#8bc34a'); // Positive
-    gradient.append('stop').attr('offset', '100%').attr('stop-color', '#2e7d32'); // Very positive
+    // Add text labels for percentages
+    arcs
+      .append('text')
+      .attr('transform', (d) => `translate(${arc.centroid(d)})`)
+      .attr('dy', '0.35em')
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#ffffff')
+      .style('font-size', '12px')
+      .style('font-weight', 'bold')
+      .text((d) => (d.data.value >= 0.05 ? `${Math.round(d.data.value * 100)}%` : ''));
     
-    // Create colored arc for score
-    const scoreArc = d3.arc()
-      .innerRadius(radius * 0.6)
-      .outerRadius(radius)
-      .startAngle(-Math.PI / 2)
-      .endAngle(-Math.PI / 2 + (Math.PI * (normalizedScore + 1) / 2));
+    // Add central text showing predominant sentiment
+    const predominant = data.reduce((prev, current) => 
+      prev.value > current.value ? prev : current
+    );
     
-    // Add colored arc
-    svg.append('path')
-      .attr('d', scoreArc as any)
-      .attr('fill', 'url(#gauge-gradient)')
-      .attr('transform', `translate(${centerX}, ${centerY})`);
+    svg
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '-0.2em')
+      .style('font-size', '14px')
+      .style('fill', '#b0bec5')
+      .text('Predominant');
     
-    // Add needle
-    const needleLength = radius * 0.8;
-    const needleRadius = 5;
-    const targetAngle = (-90 + mapScoreToAngle(normalizedScore)) * (Math.PI / 180);
+    svg
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '1em')
+      .style('font-size', '16px')
+      .style('font-weight', 'bold')
+      .style('fill', predominant.color)
+      .text(predominant.name);
     
-    // Starting angle (either from the previous position or centered)
-    const startAngle = animated ? -Math.PI / 2 : targetAngle;
-    
-    // Create needle
-    const needle = svg.append('g')
-      .attr('transform', `translate(${centerX}, ${centerY})`);
-    
-    // Add needle circle
-    needle.append('circle')
-      .attr('r', needleRadius * 2)
-      .attr('fill', '#666');
-    
-    // Add needle pointer
-    needle.append('path')
-      .attr('d', `M0,${-needleRadius} L${-needleRadius},0 L0,${needleLength} L${needleRadius},0 Z`)
-      .attr('fill', '#666')
-      .attr('transform', `rotate(${startAngle * (180 / Math.PI)})`);
-    
-    // Animate the needle if animated is true
-    if (animated) {
-      needle.select('path')
-        .transition()
-        .duration(1000)
-        .attrTween('transform', () => {
-          return function(t: number) {
-            const interpolatedAngle = d3.interpolate(startAngle, targetAngle)(t);
-            return `rotate(${interpolatedAngle * (180 / Math.PI)})`;
-          };
-        });
-    }
-    
-    // Add tick marks
-    const ticks = [-1, -0.5, 0, 0.5, 1];
-    const tickLength = radius * 0.1;
-    
-    ticks.forEach(tick => {
-      const angle = (-90 + mapScoreToAngle(tick)) * (Math.PI / 180);
-      const tickStart = radius * 0.6;
-      const tickEnd = radius * 0.6 - tickLength;
-      
-      const x1 = Math.cos(angle) * tickStart;
-      const y1 = Math.sin(angle) * tickStart;
-      const x2 = Math.cos(angle) * tickEnd;
-      const y2 = Math.sin(angle) * tickEnd;
-      
-      svg.append('line')
-        .attr('x1', centerX + x1)
-        .attr('y1', centerY + y1)
-        .attr('x2', centerX + x2)
-        .attr('y2', centerY + y2)
-        .attr('stroke', '#666')
-        .attr('stroke-width', 2);
-      
-      // Add tick labels
-      const labelRadius = tickEnd - 15;
-      const labelX = centerX + Math.cos(angle) * labelRadius;
-      const labelY = centerY + Math.sin(angle) * labelRadius;
-      
-      svg.append('text')
-        .attr('x', labelX)
-        .attr('y', labelY)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'middle')
-        .attr('font-size', '12px')
-        .attr('fill', '#666')
-        .text(() => {
-          if (tick === -1) return 'Negative';
-          if (tick === 0) return 'Neutral';
-          if (tick === 1) return 'Positive';
-          return '';
-        });
-    });
-    
-  }, [normalizedScore, size, animated]);
+  }, [positive, negative, neutral, mixed]);
   
   return (
     <div>
-      <GaugeContainer size={size}>
-        <svg ref={svgRef} width={size} height={size * 0.65}></svg>
-        {showValue && (
-          <ScoreText>
-            {formatScore(normalizedScore)}%
-          </ScoreText>
-        )}
+      <GaugeContainer>
+        <svg ref={svgRef} width="100%" height="100%" />
       </GaugeContainer>
-      {label && <Label>{label}</Label>}
+      
+      <ScoreList>
+        <ScoreItem color="#00897b">Positive: {Math.round(positive * 100)}%</ScoreItem>
+        <ScoreItem color="#d32f2f">Negative: {Math.round(negative * 100)}%</ScoreItem>
+        <ScoreItem color="#757575">Neutral: {Math.round(neutral * 100)}%</ScoreItem>
+        <ScoreItem color="#ff6f00">Mixed: {Math.round(mixed * 100)}%</ScoreItem>
+      </ScoreList>
     </div>
   );
 };
