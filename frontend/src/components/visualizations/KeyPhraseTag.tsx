@@ -1,119 +1,107 @@
 import React from 'react';
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
+import { KeyPhrase } from '../../types/models';
 
-interface KeyPhraseTagProps {
-  text: string;
-  score?: number; // Optional score between 0 and 1 representing importance
-  size?: 'sm' | 'md' | 'lg';
-  onClick?: () => void;
-  isSelected?: boolean;
-  color?: string;
-  className?: string;
+interface KeyPhraseCloudProps {
+  keyPhrases: KeyPhrase[];
 }
 
 interface TagProps {
-  size: 'sm' | 'md' | 'lg';
-  score?: number;
-  isSelected?: boolean;
-  color?: string;
-  isClickable: boolean;
+  size: number;
+  color: string;
 }
 
-const TagContainer = styled.div<TagProps>`
-  display: inline-flex;
-  align-items: center;
+const Container = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.sm};
   justify-content: center;
-  border-radius: ${props => props.theme.borderRadius.full};
-  padding: ${props => {
-    switch (props.size) {
-      case 'sm': return `${props.theme.spacing.xxs} ${props.theme.spacing.xs}`;
-      case 'lg': return `${props.theme.spacing.sm} ${props.theme.spacing.md}`;
-      default: return `${props.theme.spacing.xs} ${props.theme.spacing.sm}`;
-    }
-  }};
-  margin: ${props => props.theme.spacing.xs};
-  background-color: ${props => {
-    if (props.isSelected) {
-      return props.theme.colors.primary.main;
-    }
-    
-    if (props.color) {
-      return props.color;
-    }
-    
-    // If score is provided, use it to determine opacity
-    const baseColor = props.theme.colors.primary.light;
-    const opacity = props.score !== undefined ? 0.3 + (props.score * 0.7) : 1;
-    
-    // Extract RGB components and add alpha
-    const rgbMatch = baseColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-    const hexMatch = baseColor.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-    
-    if (rgbMatch) {
-      return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${opacity})`;
-    } else if (hexMatch) {
-      const r = parseInt(hexMatch[1], 16);
-      const g = parseInt(hexMatch[2], 16);
-      const b = parseInt(hexMatch[3], 16);
-      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    }
-    
-    return baseColor;
-  }};
-  font-size: ${props => {
-    switch (props.size) {
-      case 'sm': return props.theme.typography.fontSizes.sm;
-      case 'lg': return props.theme.typography.fontSizes.lg;
-      default: return props.theme.typography.fontSizes.md;
-    }
-  }};
-  font-weight: ${props => {
-    // If score is provided, use it to determine font weight
-    if (props.score !== undefined) {
-      // Map score from 0-1 to a range between normal and bold
-      const normalWeight = props.theme.typography.fontWeights.normal;
-      const boldWeight = props.theme.typography.fontWeights.bold;
-      return normalWeight + Math.round((boldWeight - normalWeight) * props.score);
-    }
-    return props.theme.typography.fontWeights.medium;
-  }};
-  color: ${props => props.isSelected ? props.theme.colors.primary.contrastText : props.theme.colors.text.primary};
-  transition: all 0.2s ease;
-  cursor: ${props => props.isClickable ? 'pointer' : 'default'};
-  user-select: none;
+  padding: ${({ theme }) => theme.spacing.md};
+  min-height: 150px;
+`;
+
+const Tag = styled(motion.div)<TagProps>`
+  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
+  background-color: ${({ color }) => color};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-radius: ${({ theme }) => theme.borders.radius.pill};
+  font-size: ${({ size }) => `${Math.max(0.8, Math.min(size, 1.5))}rem`};
+  display: inline-block;
+  margin: 0.25rem;
+  opacity: 0.9;
+  cursor: default;
+  transition: transform 0.3s, opacity 0.3s;
   
   &:hover {
-    transform: ${props => props.isClickable ? 'translateY(-2px)' : 'none'};
-    box-shadow: ${props => props.isClickable ? props.theme.shadows.sm : 'none'};
-  }
-  
-  &:active {
-    transform: ${props => props.isClickable ? 'translateY(0)' : 'none'};
+    opacity: 1;
+    transform: scale(1.05);
   }
 `;
 
-const KeyPhraseTag: React.FC<KeyPhraseTagProps> = ({
-  text,
-  score,
-  size = 'md',
-  onClick,
-  isSelected = false,
-  color,
-  className,
-}) => {
+const EmptyMessage = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  text-align: center;
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.lg};
+`;
+
+const KeyPhraseCloud: React.FC<KeyPhraseCloudProps> = ({ keyPhrases }) => {
+  // Function to get a color based on score
+  const getColor = (score: number) => {
+    // Using a gradient from primary light to primary dark
+    const hue = 174; // Teal base (from theme colors)
+    const saturation = Math.round(score * 100);
+    const lightness = Math.max(40, 70 - score * 30); // Higher score = darker
+    
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  };
+  
+  // Function to get a font size based on score
+  const getFontSize = (score: number) => {
+    // Score range is typically 0-1, scale to 0.8-1.5 for font size
+    return 0.8 + score * 0.7;
+  };
+  
+  // Animation variants for staggered appearance
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      },
+    },
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { opacity: 1, scale: 1 },
+  };
+  
+  if (!keyPhrases || keyPhrases.length === 0) {
+    return (
+      <Container>
+        <EmptyMessage>No key phrases detected</EmptyMessage>
+      </Container>
+    );
+  }
+  
   return (
-    <TagContainer
-      size={size}
-      score={score}
-      isSelected={isSelected}
-      color={color}
-      isClickable={!!onClick}
-      onClick={onClick}
-      className={className}
-    >
-      {text}
-    </TagContainer>
+    <Container as={motion.div} variants={containerVariants} initial="hidden" animate="visible">
+      {keyPhrases.map((phrase, index) => (
+        <Tag
+          key={`${phrase.text}-${index}`}
+          size={getFontSize(phrase.score)}
+          color={getColor(phrase.score)}
+          variants={itemVariants}
+          title={`Relevance: ${Math.round(phrase.score * 100)}%`}
+        >
+          {phrase.text}
+        </Tag>
+      ))}
+    </Container>
   );
 };
 
-export default KeyPhraseTag;
+export default KeyPhraseCloud;
