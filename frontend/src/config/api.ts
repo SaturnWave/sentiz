@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_ENDPOINT || 'https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/api',
+  BASE_URL: process.env.REACT_APP_API_ENDPOINT || 'https://api.sentimentscope.example.com/api',
   ENDPOINTS: {
     ANALYZE: '/analyze',
     HISTORY: '/history',

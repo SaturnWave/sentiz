@@ -5,6 +5,7 @@ from chalicelib.core.text_analyzer import TextAnalyzer # To get text if needed
 from chalicelib.services.polly import PollyService, PollyServiceError
 from chalicelib.services.s3_client import S3Client, S3ServiceError
 from chalicelib.services.dynamodb_client import DynamoDBClient, DynamoDBServiceError
+from chalicelib.services.comprehend import ComprehendService  # Added missing import
 from chalicelib.utils.validation import validate_tts_request # Import validator
 import json
 import logging
@@ -102,4 +103,3 @@ def register_routes(app: Chalice):
                 status_code=500,
                 headers={'Content-Type': 'application/json'}
             )
-

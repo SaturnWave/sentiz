@@ -105,20 +105,32 @@ def validate_tts_request(query_params: Dict[str, Any]) -> bool:
     """
     Validates query parameters for the GET /tts/{analysis_id} endpoint.
     """
-    if not isinstance(query_params, dict): return False # Should always be dict from Chalice
-    # user_id check happens in the route handler
-    # voice is optional, no strict validation here unless specific voices are required
-    # if 'voice' in query_params and not isinstance(query_params['voice'], str):
-    #     return False
+    if not isinstance(query_params, dict): 
+        return False
+    
+    # Check for required user_id
+    if 'user_id' not in query_params or not query_params['user_id']:
+        return False
+        
+    # Validate voice parameter if provided
+    if 'voice' in query_params:
+        if not isinstance(query_params['voice'], str):
+            return False
+        
+        # Optional: Add allowed voices validation
+        allowed_voices = ['Joanna', 'Matthew', 'Salli', 'Kimberly', 'Kendra', 'Joey', 'Justin']
+        if query_params['voice'] not in allowed_voices:
+            return False
+    
     return True
 
 def validate_presign_request(body: Dict[str, Any]) -> bool:
     """Validates request for the /batch/presign endpoint."""
-     if not isinstance(body, dict): return False
-     if not all(k in body for k in ('filename', 'contentType', 'userId')): return False
-     if not all(isinstance(body.get(k), str) and body[k] for k in ['filename', 'contentType', 'userId']): return False
-     # Optional: Validate filename format/extension
-     if not body['filename'].lower().endswith('.csv'): return False
-     return True
+    if not isinstance(body, dict): return False
+    if not all(k in body for k in ('filename', 'contentType', 'userId')): return False
+    if not all(isinstance(body.get(k), str) and body[k] for k in ['filename', 'contentType', 'userId']): return False
+    # Optional: Validate filename format/extension
+    if not body['filename'].lower().endswith('.csv'): return False
+    return True
 
 # Add more validation functions as needed...

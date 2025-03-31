@@ -1,5 +1,6 @@
 ﻿import boto3
 import logging
+from typing import Optional
 from botocore.exceptions import ClientError
 from config import config # Assuming your config is in backend/config.py
 
@@ -23,7 +24,7 @@ class PollyService:
         # self.s3_client = S3Client(region_name=self.region_name)
         # self.bucket_name = config.BUCKET_NAME
 
-    def synthesize_speech(self, text: str, voice_id: str = 'Joanna', output_format: str = 'mp3', engine: str = 'neural') -> bytes or None:
+    def synthesize_speech(self, text: str, voice_id: str = 'Joanna', output_format: str = 'mp3', engine: str = 'neural') -> Optional[bytes]:
         """
         Synthesizes speech from text directly using synchronous API.
 
@@ -34,7 +35,7 @@ class PollyService:
             engine (str): Polly engine ('standard' or 'neural'). Neural is generally higher quality.
 
         Returns:
-            bytes or None: The audio stream as bytes, or None if Polly returns no stream.
+            Optional[bytes]: The audio stream as bytes, or None if Polly returns no stream.
 
         Raises:
             PollyServiceError: If there's an error during synthesis.

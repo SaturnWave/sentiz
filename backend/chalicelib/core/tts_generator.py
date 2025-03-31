@@ -1,5 +1,6 @@
 ﻿import logging
 import time
+from typing import Optional
 from botocore.exceptions import ClientError # Import ClientError
 from chalicelib.services.polly import PollyService, PollyServiceError
 from chalicelib.services.s3_client import S3Client, S3ServiceError
@@ -18,7 +19,7 @@ class TTSGenerator:
         self.polly_service = polly_service
         self.storage_service = storage_service
 
-    def generate_tts_audio(self, text: str, analysis_id: str, user_id: str, voice_id: str = 'Joanna') -> str or None:
+    def generate_tts_audio(self, text: str, analysis_id: str, user_id: str, voice_id: str = 'Joanna') -> Optional[str]:
         """
         Generates TTS audio for the given text, saves it to S3, and returns a presigned URL.
         Uses synchronous synthesis for simplicity here.
@@ -30,7 +31,7 @@ class TTSGenerator:
             voice_id (str): The Polly voice to use.
 
         Returns:
-            str or None: A presigned URL to the generated audio file, or None if generation failed.
+            Optional[str]: A presigned URL to the generated audio file, or None if generation failed.
         """
         if not text or not text.strip():
             logger.warning("TTS generation requested with empty text.")

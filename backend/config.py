@@ -6,14 +6,25 @@ load_dotenv()
 
 class Config:
     """Base configuration."""
-    BUCKET_NAME = os.environ.get('BUCKET_NAME', 'your-unique-sentiment-analyzer-bucket') # CHANGE THIS DEFAULT LATER
+    BUCKET_NAME = os.environ.get('BUCKET_NAME', 'social-media-sentiment-analyzer-bucket')
     ANALYSIS_TABLE_NAME = os.environ.get('ANALYSIS_TABLE_NAME', 'sentiment-analysis-records')
     BATCH_TABLE_NAME = os.environ.get('BATCH_TABLE_NAME', 'sentiment-batch-jobs')
-    USER_POOL_ID = os.environ.get('USER_POOL_ID', '') # MUST BE SET in .env or environment
-    USER_POOL_CLIENT_ID = os.environ.get('USER_POOL_CLIENT_ID', '') # MUST BE SET in .env or environment
-    REGION = os.environ.get('REGION', 'us-east-1') # Default or from env
-    USER_POOL_ARN = os.environ.get('USER_POOL_ARN', '') # Needed for API Gateway Authorizer if used
+    USER_POOL_ID = os.environ.get('USER_POOL_ID', '')
+    USER_POOL_CLIENT_ID = os.environ.get('USER_POOL_CLIENT_ID', '')
+    REGION = os.environ.get('REGION', 'us-east-1')
+    USER_POOL_ARN = os.environ.get('USER_POOL_ARN', '')
     ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+    
+    # TTS Configuration
+    ALLOWED_VOICES = ['Joanna', 'Matthew', 'Salli', 'Kimberly', 'Kendra', 'Joey', 'Justin']
+    DEFAULT_VOICE = 'Joanna'
+    
+    # Batch Processing Configuration
+    MAX_BATCH_SIZE = 100
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    
+    # Analysis Configuration
+    MAX_TEXT_LENGTH = 5000
 
 class DevelopmentConfig(Config):
     """Development configuration."""
