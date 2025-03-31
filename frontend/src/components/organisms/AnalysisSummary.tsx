@@ -1,231 +1,316 @@
 import React from 'react';
 import styled from 'styled-components';
-import SentimentGauge from '../visualizations/SentimentGauge';
+import { motion } from 'framer-motion';
+import Card from '../molecules/Card';
+import SentimentScore from '../visualizations/SentimentScore';
 import KeyPhraseCloud from '../visualizations/KeyPhraseCloud';
-
-interface Entity {
-  id: string;
-  text: string;
-  type: string;
-  score?: number;
-}
-
-interface KeyPhrase {
-  text: string;
-  score?: number;
-}
-
-interface SentimentScores {
-  positive: number;
-  negative: number;
-  neutral: number;
-  mixed?: number;
-}
+import TextToSpeech from './TextToSpeech';
+import Button from '../atoms/Button';
+import { AnalysisResult } from '../../types/models';
+import { formatTimestamp } from '../../utils/formatting';
 
 interface AnalysisSummaryProps {
-  text?: string;
-  sentiment?: SentimentScores;
-  sentimentScore?: number;
-  keyPhrases?: KeyPhrase[];
-  entities?: Entity[];
-  isLoading?: boolean;
-  analysisDate?: Date;
-  onKeyPhraseClick?: (phrase: KeyPhrase) => void;
+  result: AnalysisResult;
+  showText?: boolean;
+  showTts?: boolean;
+  onNewAnalysis?: () => void;
   className?: string;
 }
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  background-color: ${({ theme }) => theme.colors.background.card};
-  border-radius: ${({ theme }) => theme.borders.radius.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  gap: ${({ theme }) => theme.spacing.lg};
+const Container = styled(Card)`
+  width: 100%;
+  overflow: hidden;
 `;
 
-const Title = styled.h3`
-  margin: 0;
-  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
+    flex-direction: column;
+    gap: ${({ theme }) => theme.spacing.md};
+  }
+`;
+
+const HeaderLeft = styled.div`
+  flex: 1;
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
+    width: 100%;
+    align-items: flex-start;
+  }
+`;
+
+const Title = styled.h2`
+  font-size: ${({ theme }) => theme.typography.fontSizes.xl};
   color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
+  margin: 0 0 ${({ theme }) => theme.spacing.xs} 0;
 `;
 
-const Section = styled.div`
+const Metadata = styled.div`
   display: flex;
-  flex-direction: column;
   gap: ${({ theme }) => theme.spacing.md};
+  flex-wrap: wrap;
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
+    flex-direction: column;
+    gap: ${({ theme }) => theme.spacing.xs};
+  }
 `;
 
-const SectionTitle = styled.h4`
-  margin: 0;
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
+const MetaItem = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: ${({ theme }) => theme.spacing.xs};
+  gap: ${({ theme }) => theme.spacing.xs};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
+`;
+
+const MetaIcon = styled.span`
+  font-size: 1rem;
+`;
+
+const SourceTag = styled.div<{ source: string }>`
+  display: inline-flex;
+  align-items: center;
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: ${({ theme }) => theme.borders.radius.pill};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
+`;
+
+const ContentSection = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+`;
+
+const SectionTitle = styled.h3`
+  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
+`;
+
+const TextContent = styled.div`
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  padding: ${({ theme }) => theme.spacing.md};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSizes.md};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  max-height: 200px;
+  overflow-y: auto;
 `;
 
 const SentimentSection = styled.div`
   display: flex;
+  gap: ${({ theme }) => theme.spacing.lg};
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  flex-wrap: wrap;
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
+    flex-direction: column;
+  }
+`;
+
+const SentimentScoreContainer = styled.div`
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: ${({ theme }) => theme.spacing.md};
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  min-width: 120px;
 `;
 
-const EntitySection = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+const SentimentScores = styled.div`
+  display: flex;
+  flex-wrap: wrap;
   gap: ${({ theme }) => theme.spacing.md};
-  margin-top: ${({ theme }) => theme.spacing.sm};
+  flex: 1;
 `;
 
-const EntityCard = styled.div<{ entityType: string }>`
+const ScoreItem = styled.div`
   display: flex;
   flex-direction: column;
+  align-items: center;
   padding: ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  border-left: 3px solid ${({ entityType, theme }) => {
-    switch (entityType.toLowerCase()) {
-      case 'person':
-        return theme.colors.primary.main;
-      case 'location':
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  min-width: 100px;
+`;
+
+const ScoreLabel = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+`;
+
+const ScoreValue = styled.div<{ sentiment: string }>`
+  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
+  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
+  color: ${({ sentiment, theme }) => {
+    switch (sentiment) {
+      case 'POSITIVE':
         return theme.colors.sentiment.positive;
-      case 'organization':
+      case 'NEGATIVE':
+        return theme.colors.sentiment.negative;
+      case 'MIXED':
         return theme.colors.sentiment.mixed;
-      case 'date':
-        return theme.colors.secondary.main;
       default:
         return theme.colors.sentiment.neutral;
     }
   }};
 `;
 
-const EntityType = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSizes.xs};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
+const KeyPhrasesSection = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
 `;
 
-const EntityText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-`;
-
-const TextSample = styled.div`
+const TTSSection = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
   padding: ${({ theme }) => theme.spacing.md};
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  max-height: 100px;
-  overflow-y: auto;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: ${({ theme }) => theme.borders.radius.md};
 `;
 
-const DateText = styled.div`
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin-top: ${({ theme }) => theme.spacing.md};
-  text-align: right;
-`;
-
-const EmptyState = styled.div`
+const ButtonsContainer = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${({ theme }) => theme.spacing.xl};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-style: italic;
-  text-align: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  margin-top: ${({ theme }) => theme.spacing.lg};
 `;
 
 const AnalysisSummary: React.FC<AnalysisSummaryProps> = ({
-  text,
-  sentiment,
-  sentimentScore = 0.5,
-  keyPhrases = [],
-  entities = [],
-  isLoading = false,
-  analysisDate,
-  onKeyPhraseClick,
+  result,
+  showText = true,
+  showTts = true,
+  onNewAnalysis,
   className,
 }) => {
-  if (isLoading) {
-    return (
-      <Container className={className}>
-        <EmptyState>Loading analysis results...</EmptyState>
-      </Container>
-    );
-  }
-
-  if (!sentiment && keyPhrases.length === 0 && entities.length === 0) {
-    return (
-      <Container className={className}>
-        <EmptyState>No analysis results available</EmptyState>
-      </Container>
-    );
-  }
-
+  // Format metadata for display
+  const formattedTimestamp = formatTimestamp(result.timestamp);
+  const textLength = result.text_length;
+  const sourceDisplay = result.source.charAt(0).toUpperCase() + result.source.slice(1);
+  
+  // Format sentiment for display
+  const formatSentiment = (sentiment: string): string => {
+    return sentiment.charAt(0) + sentiment.slice(1).toLowerCase();
+  };
+  
   return (
-    <Container className={className}>
-      <Title>Analysis Summary</Title>
+    <Container
+      title=""
+      elevation="medium"
+      variant="gradient"
+      className={className}
+      as={motion.div}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Header>
+        <HeaderLeft>
+          <Title>Analysis Results</Title>
+          <Metadata>
+            <MetaItem>
+              <MetaIcon>🕒</MetaIcon>
+              <span>{formattedTimestamp}</span>
+            </MetaItem>
+            <MetaItem>
+              <MetaIcon>📝</MetaIcon>
+              <span>{textLength} characters</span>
+            </MetaItem>
+            <MetaItem>
+              <SourceTag source={result.source}>
+                {sourceDisplay}
+              </SourceTag>
+            </MetaItem>
+          </Metadata>
+        </HeaderLeft>
+        <HeaderRight>
+          <ButtonsContainer>
+            {onNewAnalysis && (
+              <Button 
+                onClick={onNewAnalysis}
+                variant="outlined"
+                size="small"
+              >
+                New Analysis
+              </Button>
+            )}
+          </ButtonsContainer>
+        </HeaderRight>
+      </Header>
       
-      {text && (
-        <Section>
+      {showText && (
+        <ContentSection>
           <SectionTitle>Analyzed Text</SectionTitle>
-          <TextSample>
-            {text.length > 300 ? `${text.substring(0, 300)}...` : text}
-          </TextSample>
-        </Section>
+          <TextContent>
+            {result.text_sample}
+          </TextContent>
+        </ContentSection>
       )}
       
-      {sentiment && (
-        <Section>
-          <SectionTitle>Sentiment Analysis</SectionTitle>
-          <SentimentSection>
-            <SentimentGauge score={sentimentScore} size="large" />
-          </SentimentSection>
-        </Section>
-      )}
-      
-      {keyPhrases.length > 0 && (
-        <Section>
-          <SectionTitle>Key Phrases</SectionTitle>
-          <KeyPhraseCloud
-            phrases={keyPhrases}
-            maxItems={20}
-            onPhraseClick={onKeyPhraseClick}
+      <SentimentSection>
+        <SentimentScoreContainer>
+          <SentimentScore 
+            score={result.sentiment_scores[result.sentiment.charAt(0) + result.sentiment.slice(1).toLowerCase() as keyof typeof result.sentiment_scores]}
+            sentiment={result.sentiment}
+            size="large"
           />
-        </Section>
-      )}
+        </SentimentScoreContainer>
+        
+        <SentimentScores>
+          <ScoreItem>
+            <ScoreLabel>Positive</ScoreLabel>
+            <ScoreValue sentiment="POSITIVE">
+              {Math.round(result.sentiment_scores.Positive * 100)}%
+            </ScoreValue>
+          </ScoreItem>
+          <ScoreItem>
+            <ScoreLabel>Negative</ScoreLabel>
+            <ScoreValue sentiment="NEGATIVE">
+              {Math.round(result.sentiment_scores.Negative * 100)}%
+            </ScoreValue>
+          </ScoreItem>
+          <ScoreItem>
+            <ScoreLabel>Neutral</ScoreLabel>
+            <ScoreValue sentiment="NEUTRAL">
+              {Math.round(result.sentiment_scores.Neutral * 100)}%
+            </ScoreValue>
+          </ScoreItem>
+          <ScoreItem>
+            <ScoreLabel>Mixed</ScoreLabel>
+            <ScoreValue sentiment="MIXED">
+              {Math.round(result.sentiment_scores.Mixed * 100)}%
+            </ScoreValue>
+          </ScoreItem>
+        </SentimentScores>
+      </SentimentSection>
       
-      {entities.length > 0 && (
-        <Section>
-          <SectionTitle>Entities</SectionTitle>
-          <EntitySection>
-            {entities.slice(0, 6).map((entity) => (
-              <EntityCard key={entity.id} entityType={entity.type}>
-                <EntityType>{entity.type}</EntityType>
-                <EntityText>{entity.text}</EntityText>
-              </EntityCard>
-            ))}
-          </EntitySection>
-        </Section>
-      )}
+      <KeyPhrasesSection>
+        <SectionTitle>Key Phrases</SectionTitle>
+        <KeyPhraseCloud keyPhrases={result.key_phrases} />
+      </KeyPhrasesSection>
       
-      {analysisDate && (
-        <DateText>
-          Analyzed on: {analysisDate.toLocaleDateString()} at {analysisDate.toLocaleTimeString()}
-        </DateText>
+      {showTts && (
+        <TTSSection>
+          <SectionTitle>Text-to-Speech</SectionTitle>
+          <TextToSpeech 
+            analysisId={result.analysis_id}
+            text={result.text_sample}
+          />
+        </TTSSection>
       )}
     </Container>
   );
