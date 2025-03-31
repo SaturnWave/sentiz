@@ -1,260 +1,290 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { LoadingIndicator } from '../ui/LoadingSpinner';
+import Button from '../atoms/Button';
+import { apiService } from '../../services/api';
+import { analyticsService } from '../../services/analytics';
 
 interface TextToSpeechProps {
-  text?: string;
-  onSubmit?: (text: string, voice: string) => Promise<void>;
-  onPlayAudio?: (audioUrl: string) => void;
-  isProcessing?: boolean;
-  audioUrl?: string;
-  availableVoices?: Array<{ id: string; name: string; gender?: string }>;
+  analysisId: string;
+  text: string;
+  voice?: string;
+  autoPlay?: boolean;
+  onPlayStateChange?: (isPlaying: boolean) => void;
   className?: string;
 }
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  background-color: ${({ theme }) => theme.colors.background.card};
-  border-radius: ${({ theme }) => theme.borders.radius.md};
-  padding: ${({ theme }) => theme.spacing.lg};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-`;
-
-const Title = styled.h3`
-  margin: 0 0 ${({ theme }) => theme.spacing.md};
-  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 120px;
-  padding: ${({ theme }) => theme.spacing.md};
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  resize: vertical;
-  
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary.main};
-    box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.2);
-  }
-`;
-
-const Controls = styled.div`
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: ${({ theme }) => theme.spacing.md};
-  align-items: center;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
-const VoiceSelector = styled.select`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary.main};
-  }
+const AudioContainer = styled.div`
+  width: 100%;
+  max-width: 400px;
 `;
 
-const SubmitButton = styled.button<{ isProcessing: boolean }>`
-  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
-  background-color: ${({ theme, isProcessing }) => 
-    isProcessing ? theme.colors.primary.dark : theme.colors.primary.main
-  };
-  color: ${({ theme }) => theme.colors.primary.contrastText};
-  border: none;
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  cursor: ${({ isProcessing }) => (isProcessing ? 'not-allowed' : 'pointer')};
-  transition: background-color 0.2s;
+const AudioPlayer = styled.audio`
+  width: 100%;
+`;
+
+const CustomControls = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  margin-top: ${({ theme }) => theme.spacing.sm};
+`;
+
+const PlayButton = styled(Button)<{ isPlaying: boolean }>`
+  min-width: 100px;
+`;
+
+const VolumeControl = styled.div`
+  display: flex;
+  align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
-  
-  &:hover {
-    background-color: ${({ theme, isProcessing }) => 
-      isProcessing ? theme.colors.primary.dark : theme.colors.primary.light
-    };
-  }
-  
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.3);
-  }
 `;
 
-const AudioPlayer = styled.div`
-  width: 100%;
-  margin-top: ${({ theme }) => theme.spacing.md};
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: ${({ theme }) => theme.spacing.md};
-`;
-
-const Player = styled.audio`
-  width: 100%;
-  
-  &:focus {
-    outline: none;
-  }
-`;
-
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: ${({ theme }) => theme.spacing.lg};
+const VolumeIcon = styled.span`
+  font-size: 1.2rem;
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-style: italic;
-  text-align: center;
 `;
 
-const InfoText = styled.p`
+const VolumeSlider = styled.input`
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  outline: none;
+  
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.colors.primary.main};
+    cursor: pointer;
+  }
+  
+  &::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.colors.primary.main};
+    cursor: pointer;
+    border: none;
+  }
+`;
+
+const StatusMessage = styled(motion.div)`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  margin: 0 0 ${({ theme }) => theme.spacing.md};
 `;
 
-const IconWrapper = styled.span`
-  display: inline-flex;
-  margin-right: ${({ theme }) => theme.spacing.xs};
-`;
-
-const AudioWave = styled(motion.div)`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 20px;
-  gap: 2px;
-`;
-
-const AudioBar = styled(motion.div)`
-  width: 2px;
-  background-color: ${({ theme }) => theme.colors.primary.contrastText};
-  border-radius: ${({ theme }) => theme.borders.radius.pill};
+const LoadingDots = styled(motion.span)`
+  display: inline-block;
+  
+  &::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+  }
+  
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
 `;
 
 const TextToSpeech: React.FC<TextToSpeechProps> = ({
-  text = '',
-  onSubmit,
-  onPlayAudio,
-  isProcessing = false,
-  audioUrl,
-  availableVoices = [],
+  analysisId,
+  text,
+  voice = 'Joanna',
+  autoPlay = false,
+  onPlayStateChange,
   className,
 }) => {
-  const [inputText, setInputText] = useState(text);
-  const [selectedVoice, setSelectedVoice] = useState(
-    availableVoices.length > 0 ? availableVoices[0].id : ''
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.8);
   
-  const handleSubmit = async () => {
-    if (onSubmit && inputText.trim() && selectedVoice) {
-      await onSubmit(inputText, selectedVoice);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
+  // Fetch the audio URL when the component mounts
+  useEffect(() => {
+    if (analysisId) {
+      fetchAudioUrl();
+    }
+  }, [analysisId, voice]);
+  
+  // Handle autoplay when audioUrl is available
+  useEffect(() => {
+    if (audioUrl && autoPlay && audioRef.current) {
+      playAudio();
+    }
+  }, [audioUrl, autoPlay]);
+  
+  // Fetch audio URL from API
+  const fetchAudioUrl = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await apiService.get(`/tts/${analysisId}`, {
+        params: { voice }
+      });
+      
+      if (response.audio_url) {
+        setAudioUrl(response.audio_url);
+        
+        // Track successful TTS generation
+        analyticsService.trackFeatureUsed('text_to_speech', {
+          analysisId,
+          textLength: text.length,
+          voice,
+        });
+      } else {
+        setError('Failed to generate audio.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate audio.');
+      
+      // Track error
+      analyticsService.trackError(
+        'TTS generation failed',
+        'TTS_ERROR',
+        { analysisId, textLength: text.length, voice }
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  const handlePlayAudio = () => {
-    if (onPlayAudio && audioUrl) {
-      onPlayAudio(audioUrl);
+  // Play audio
+  const playAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      audioRef.current.play().catch(err => {
+        console.error('Audio playback error:', err);
+      });
     }
   };
   
-  const AudioWaveAnimation = () => (
-    <AudioWave>
-      {[...Array(4)].map((_, i) => (
-        <AudioBar
-          key={i}
-          initial={{ height: 5 }}
-          animate={{ 
-            height: [5, 12, 5],
-            transition: {
-              repeat: Infinity,
-              repeatType: 'reverse',
-              duration: 0.6,
-              delay: i * 0.1,
-            }
-          }}
-        />
-      ))}
-    </AudioWave>
-  );
+  // Pause audio
+  const pauseAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+  };
+  
+  // Toggle play/pause
+  const togglePlayPause = () => {
+    if (isPlaying) {
+      pauseAudio();
+    } else {
+      playAudio();
+    }
+  };
+  
+  // Handle volume change
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+  
+  // Handle audio play event
+  const handlePlay = () => {
+    setIsPlaying(true);
+    if (onPlayStateChange) {
+      onPlayStateChange(true);
+    }
+  };
+  
+  // Handle audio pause event
+  const handlePause = () => {
+    setIsPlaying(false);
+    if (onPlayStateChange) {
+      onPlayStateChange(false);
+    }
+  };
+  
+  // Handle audio ended event
+  const handleEnded = () => {
+    setIsPlaying(false);
+    if (onPlayStateChange) {
+      onPlayStateChange(false);
+    }
+  };
   
   return (
     <Container className={className}>
-      <Title>Text to Speech</Title>
-      <InfoText>
-        Enter the text you would like to convert to speech and select a voice.
-      </InfoText>
-      <TextArea
-        placeholder="Type or paste your text here..."
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        disabled={isProcessing}
-      />
-      <Controls>
-        <VoiceSelector
-          value={selectedVoice}
-          onChange={(e) => setSelectedVoice(e.target.value)}
-          disabled={isProcessing || availableVoices.length === 0}
+      {isLoading ? (
+        <StatusMessage
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
         >
-          {availableVoices.length > 0 ? (
-            availableVoices.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.name} {voice.gender ? `(${voice.gender})` : ''}
-              </option>
-            ))
-          ) : (
-            <option value="">No voices available</option>
-          )}
-        </VoiceSelector>
-        <SubmitButton
-          onClick={handleSubmit}
-          disabled={isProcessing || !inputText.trim() || !selectedVoice}
-          isProcessing={isProcessing}
+          Generating audio<LoadingDots />
+        </StatusMessage>
+      ) : error ? (
+        <StatusMessage
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
         >
-          {isProcessing ? (
-            <>
-              <LoadingIndicator size="small" text="" />
-              Generating Audio...
-            </>
-          ) : (
-            <>
-              <IconWrapper>
-                <AudioWaveAnimation />
-              </IconWrapper>
-              Generate Audio
-            </>
-          )}
-        </SubmitButton>
-      </Controls>
-      
-      {audioUrl ? (
-        <AudioPlayer>
-          <Player controls src={audioUrl} onPlay={handlePlayAudio}>
-            Your browser does not support the audio element.
-          </Player>
-        </AudioPlayer>
-      ) : !isProcessing && (
-        <EmptyState>
-          Generated audio will appear here
-        </EmptyState>
+          {error}
+        </StatusMessage>
+      ) : audioUrl ? (
+        <AudioContainer>
+          <AudioPlayer
+            ref={audioRef}
+            src={audioUrl}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onEnded={handleEnded}
+          />
+          <CustomControls>
+            <PlayButton
+              onClick={togglePlayPause}
+              isPlaying={isPlaying}
+              variant={isPlaying ? 'secondary' : 'primary'}
+              size="small"
+            >
+              {isPlaying ? 'Pause' : 'Play'}
+            </PlayButton>
+            
+            <VolumeControl>
+              <VolumeIcon>🔊</VolumeIcon>
+              <VolumeSlider
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={handleVolumeChange}
+              />
+            </VolumeControl>
+          </CustomControls>
+        </AudioContainer>
+      ) : (
+        <Button
+          onClick={fetchAudioUrl}
+          disabled={isLoading}
+          variant="primary"
+          size="small"
+        >
+          Generate Audio
+        </Button>
       )}
     </Container>
   );

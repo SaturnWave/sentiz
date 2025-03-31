@@ -1,154 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import styled, { css, keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store';
+import { removeNotification } from '../../features/ui/slices/uiSlice';
 
-export type NotificationType = 'success' | 'error' | 'warning' | 'info';
-
-interface NotificationProps {
-  type: NotificationType;
-  message: string;
-  title?: string;
-  duration?: number;
-  onClose?: () => void;
-  isVisible?: boolean;
-  className?: string;
-}
-
-const slideIn = keyframes`
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-`;
-
-const slideOut = keyframes`
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-`;
-
-const NotificationContainer = styled(motion.div)<{ type: NotificationType }>`
+// Container for all notifications
+const NotificationsContainer = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: ${({ theme }) => theme.zIndices.tooltip};
   display: flex;
   flex-direction: column;
-  min-width: 300px;
+  gap: ${({ theme }) => theme.spacing.sm};
   max-width: 400px;
+`;
+
+// Single notification item
+const NotificationItem = styled(motion.div)<{ type: string }>`
   padding: ${({ theme }) => theme.spacing.md};
   border-radius: ${({ theme }) => theme.borders.radius.md};
-  box-shadow: ${({ theme }) => theme.shadows.lg};
-  background-color: ${({ theme }) => theme.colors.background.elevated};
-  position: relative;
-  overflow: hidden;
-  margin-bottom: ${({ theme }) => theme.spacing.md};
-  
-  ${({ type, theme }) => {
-    switch (type) {
-      case 'success':
-        return css`
-          border-left: 4px solid ${theme.colors.sentiment.positive};
-          &::before {
-            background-color: ${theme.colors.sentiment.positive};
-          }
-        `;
-      case 'error':
-        return css`
-          border-left: 4px solid ${theme.colors.sentiment.negative};
-          &::before {
-            background-color: ${theme.colors.sentiment.negative};
-          }
-        `;
-      case 'warning':
-        return css`
-          border-left: 4px solid ${theme.colors.sentiment.mixed};
-          &::before {
-            background-color: ${theme.colors.sentiment.mixed};
-          }
-        `;
-      case 'info':
-      default:
-        return css`
-          border-left: 4px solid ${theme.colors.primary.main};
-          &::before {
-            background-color: ${theme.colors.primary.main};
-          }
-        `;
-    }
-  }}
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    opacity: 0.7;
-  }
-`;
-
-const NotificationHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: ${({ theme }) => theme.spacing.sm};
-`;
-
-const NotificationTitle = styled.h4<{ type: NotificationType }>`
-  margin: 0;
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  color: ${({ type, theme }) => {
-    switch (type) {
-      case 'success':
-        return theme.colors.sentiment.positive;
-      case 'error':
-        return theme.colors.sentiment.negative;
-      case 'warning':
-        return theme.colors.sentiment.mixed;
-      case 'info':
-      default:
-        return theme.colors.primary.main;
-    }
-  }};
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  
-  &:hover {
-    color: ${({ theme }) => theme.colors.text.primary};
-  }
-  
-  &:focus {
-    outline: none;
-  }
-`;
-
-const NotificationMessage = styled.div`
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-`;
-
-const ProgressBar = styled.div<{ duration: number; type: NotificationType }>`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
   background-color: ${({ type, theme }) => {
     switch (type) {
       case 'success':
@@ -157,122 +29,152 @@ const ProgressBar = styled.div<{ duration: number; type: NotificationType }>`
         return theme.colors.sentiment.negative;
       case 'warning':
         return theme.colors.sentiment.mixed;
-      case 'info':
       default:
-        return theme.colors.primary.main;
+        return theme.colors.background.elevated;
     }
   }};
-  width: 100%;
-  transform-origin: left;
+  color: ${({ theme }) => theme.colors.text.primary};
+  box-shadow: ${({ theme }) => theme.shadows.md};
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+`;
+
+// Icon based on notification type
+const NotificationIcon = styled.div<{ type: string }>`
+  margin-right: ${({ theme }) => theme.spacing.sm};
+  font-size: 1.2rem;
+  
+  &::before {
+    content: ${({ type }) => {
+      switch (type) {
+        case 'success':
+          return '"✓"';
+        case 'error':
+          return '"✕"';
+        case 'warning':
+          return '"⚠"';
+        default:
+          return '"ℹ"';
+      }
+    }};
+  }
+`;
+
+// Content of the notification
+const NotificationContent = styled.div`
+  flex: 1;
+`;
+
+// Title of the notification
+const NotificationTitle = styled.div`
+  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+`;
+
+// Message of the notification
+const NotificationMessage = styled.div`
+  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
+`;
+
+// Close button
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  margin-left: ${({ theme }) => theme.spacing.sm};
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+// Progress bar for auto-dismiss
+const ProgressBar = styled.div<{ duration: number }>`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background-color: rgba(255, 255, 255, 0.5);
   animation: shrink ${({ duration }) => duration}ms linear forwards;
   
   @keyframes shrink {
-    from {
-      transform: scaleX(1);
-    }
-    to {
-      transform: scaleX(0);
-    }
+    from { width: 100%; }
+    to { width: 0%; }
   }
 `;
 
-const getDefaultTitle = (type: NotificationType): string => {
-  switch (type) {
-    case 'success':
-      return 'Success';
-    case 'error':
-      return 'Error';
-    case 'warning':
-      return 'Warning';
-    case 'info':
-    default:
-      return 'Information';
-  }
-};
-
-const Notification: React.FC<NotificationProps> = ({
-  type,
-  message,
-  title,
-  duration = 5000,
-  onClose,
-  isVisible = true,
-  className,
-}) => {
-  const [visible, setVisible] = useState(isVisible);
+const Notifications: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const notifications = useSelector((state: RootState) => state.ui.notifications);
   
-  useEffect(() => {
-    setVisible(isVisible);
-  }, [isVisible]);
-  
-  useEffect(() => {
-    if (duration && duration > 0 && visible) {
-      const timer = setTimeout(() => {
-        setVisible(false);
-        if (onClose) onClose();
-      }, duration);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [duration, onClose, visible]);
-  
-  const handleClose = () => {
-    setVisible(false);
-    if (onClose) onClose();
+  // Animation variants for notifications
+  const notificationVariants = {
+    initial: { opacity: 0, x: 50, scale: 0.9 },
+    animate: { opacity: 1, x: 0, scale: 1 },
+    exit: { opacity: 0, x: 50, scale: 0.9 }
   };
   
-  const notificationTitle = title || getDefaultTitle(type);
-  
-  // Animation variants
-  const variants = {
-    visible: { 
-      x: 0, 
-      opacity: 1,
-      transition: { type: 'spring', stiffness: 300, damping: 24 }
-    },
-    hidden: { 
-      x: '100%', 
-      opacity: 0,
-      transition: { duration: 0.2 }
-    },
+  // Handle closing a notification
+  const handleClose = (id: string) => {
+    dispatch(removeNotification(id));
   };
+  
+  // Setup auto-dismiss timers
+  useEffect(() => {
+    notifications.forEach(notification => {
+      if (notification.duration) {
+        const timer = setTimeout(() => {
+          dispatch(removeNotification(notification.id));
+        }, notification.duration);
+        
+        // Clean up timers
+        return () => {
+          clearTimeout(timer);
+        };
+      }
+    });
+  }, [notifications, dispatch]);
   
   return (
-    <AnimatePresence>
-      {visible && (
-        <NotificationContainer
-          className={className}
-          type={type}
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
-          variants={variants}
-        >
-          <NotificationHeader>
-            <NotificationTitle type={type}>{notificationTitle}</NotificationTitle>
-            <CloseButton onClick={handleClose} aria-label="Close notification">
+    <NotificationsContainer>
+      <AnimatePresence>
+        {notifications.map(notification => (
+          <NotificationItem
+            key={notification.id}
+            type={notification.type}
+            variants={notificationVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            layout
+          >
+            <NotificationIcon type={notification.type} />
+            <NotificationContent>
+              <NotificationTitle>
+                {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
+              </NotificationTitle>
+              <NotificationMessage>{notification.message}</NotificationMessage>
+            </NotificationContent>
+            <CloseButton onClick={() => handleClose(notification.id)}>
               ×
             </CloseButton>
-          </NotificationHeader>
-          <NotificationMessage>{message}</NotificationMessage>
-          {duration > 0 && <ProgressBar duration={duration} type={type} />}
-        </NotificationContainer>
-      )}
-    </AnimatePresence>
+            {notification.duration && (
+              <ProgressBar duration={notification.duration} />
+            )}
+          </NotificationItem>
+        ))}
+      </AnimatePresence>
+    </NotificationsContainer>
   );
 };
 
-export default Notification;
-
-// Notification container component for managing multiple notifications
-export const NotificationCenter = styled.div`
-  position: fixed;
-  top: ${({ theme }) => theme.spacing.lg};
-  right: ${({ theme }) => theme.spacing.lg};
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-  z-index: ${({ theme }) => theme.zIndices.tooltip};
-  width: 400px;
-  max-width: 90vw;
-`;
+export default Notifications;

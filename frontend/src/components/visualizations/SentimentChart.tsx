@@ -1,303 +1,495 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import * as d3 from 'd3';
-
-interface SentimentDataPoint {
-  date: Date | string;
-  positive: number;
-  negative: number;
-  neutral: number;
-  overall?: number; // Optional overall sentiment score
-}
+import { AnalysisResult } from '../../types/models';
 
 interface SentimentChartProps {
-  data: SentimentDataPoint[];
-  width?: number;
+  data: AnalysisResult[];
+  type?: 'pie' | 'bar' | 'line';
   height?: number;
+  width?: number;
   showLegend?: boolean;
-  timeFormat?: string; // e.g. '%Y-%m-%d', '%H:%M', etc.
   className?: string;
 }
 
-const ChartContainer = styled.div<{ width: number; height: number }>`
-  width: ${({ width }) => width}px;
-  height: ${({ height }) => height}px;
+const ChartContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  overflow: hidden;
   position: relative;
 `;
 
-const LegendContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-  gap: 20px;
-`;
-
-const LegendItem = styled.div<{ color: string }>`
+const NoDataMessage = styled.div`
   display: flex;
   align-items: center;
-  font-size: 14px;
-  
-  &::before {
-    content: '';
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    background-color: ${({ color }) => color};
-    margin-right: 5px;
-    border-radius: 2px;
-  }
-`;
-
-const Tooltip = styled.div`
-  position: absolute;
-  display: none;
-  background: ${({ theme }) => theme.colors.background.paper};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  padding: ${({ theme }) => theme.spacing.sm};
-  box-shadow: ${({ theme }) => theme.shadows.md};
-  pointer-events: none;
-  z-index: 10;
-`;
-
-const TooltipTitle = styled.div`
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-  color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-const TooltipRow = styled.div<{ color: string }>`
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 2px;
-  
-  span:first-child {
-    margin-right: 10px;
-    position: relative;
-    padding-left: 15px;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 10px;
-      height: 10px;
-      background-color: ${({ color }) => color};
-      border-radius: 2px;
-    }
-  }
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSizes.md};
 `;
 
 const SentimentChart: React.FC<SentimentChartProps> = ({
   data,
-  width = 600,
+  type = 'pie',
   height = 300,
+  width = 400,
   showLegend = true,
-  timeFormat = '%b %d',
   className,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
   
-  // Colors for different sentiment categories
-  const colors = {
-    positive: '#4caf50', // Green
-    neutral: '#ffca28',  // Yellow
-    negative: '#f44336', // Red
-    overall: '#2196f3',  // Blue
+  // Render chart when data or dimensions change
+  useEffect(() => {
+    if (!data || data.length === 0 || !svgRef.current) return;
+    
+    // Clear any existing chart
+    d3.select(svgRef.current).selectAll('*').remove();
+    
+    // Create the appropriate chart based on type
+    switch (type) {
+      case 'pie':
+        createPieChart();
+        break;
+      case 'bar':
+        createBarChart();
+        break;
+      case 'line':
+        createLineChart();
+        break;
+      default:
+        createPieChart();
+    }
+  }, [data, type, height, width]);
+  
+  // Create a pie chart showing sentiment distribution
+  const createPieChart = () => {
+    const svg = d3.select(svgRef.current);
+    
+    // Set dimensions
+    const chartWidth = width;
+    const chartHeight = height;
+    const radius = Math.min(chartWidth, chartHeight) / 2 * 0.8;
+    
+    // Create group for the pie chart
+    const g = svg
+      .append('g')
+      .attr('transform', `translate(${chartWidth / 2}, ${chartHeight / 2})`);
+    
+    // Calculate sentiment distribution
+    const sentimentCounts = {
+      POSITIVE: 0,
+      NEGATIVE: 0,
+      NEUTRAL: 0,
+      MIXED: 0
+    };
+    
+    data.forEach(item => {
+      sentimentCounts[item.sentiment]++;
+    });
+    
+    // Convert to array format for D3
+    const pieData = Object.entries(sentimentCounts)
+      .filter(([_, count]) => count > 0)
+      .map(([sentiment, count]) => ({ sentiment, count }));
+    
+    // Create pie layout
+    const pie = d3.pie<any>()
+      .value(d => d.count)
+      .sort(null);
+    
+    // Create arc generator
+    const arc = d3.arc<any>()
+      .innerRadius(radius * 0.5) // Use donut chart style
+      .outerRadius(radius);
+    
+    // Color scale for sentiments
+    const colorScale = d3.scaleOrdinal<string>()
+      .domain(['POSITIVE', 'NEGATIVE', 'NEUTRAL', 'MIXED'])
+      .range(['#00897b', '#d32f2f', '#757575', '#ff6f00']);
+    
+    // Draw pie slices
+    const arcs = g.selectAll('.arc')
+      .data(pie(pieData))
+      .enter()
+      .append('g')
+      .attr('class', 'arc');
+    
+    arcs.append('path')
+      .attr('d', arc)
+      .attr('fill', d => colorScale(d.data.sentiment) as string)
+      .attr('stroke', 'rgba(0, 0, 0, 0.2)')
+      .attr('stroke-width', 1)
+      .transition()
+      .duration(800)
+      .attrTween('d', function(d) {
+        const interpolate = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
+        return function(t) {
+          return arc(interpolate(t));
+        };
+      });
+    
+    // Add percentage labels
+    arcs.append('text')
+      .attr('transform', d => `translate(${arc.centroid(d)})`)
+      .attr('dy', '0.35em')
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#ffffff')
+      .style('font-size', '12px')
+      .style('font-weight', 'bold')
+      .text(d => {
+        const percent = Math.round((d.data.count / data.length) * 100);
+        return percent >= 5 ? `${percent}%` : '';
+      });
+    
+    // Add a legend if requested
+    if (showLegend) {
+      const legend = svg
+        .append('g')
+        .attr('transform', `translate(${chartWidth - 100}, 20)`);
+      
+      const legendItems = [
+        { label: 'Positive', color: '#00897b' },
+        { label: 'Negative', color: '#d32f2f' },
+        { label: 'Neutral', color: '#757575' },
+        { label: 'Mixed', color: '#ff6f00' }
+      ];
+      
+      legendItems.forEach((item, i) => {
+        const legendItem = legend
+          .append('g')
+          .attr('transform', `translate(0, ${i * 20})`);
+        
+        legendItem
+          .append('rect')
+          .attr('width', 12)
+          .attr('height', 12)
+          .attr('fill', item.color);
+        
+        legendItem
+          .append('text')
+          .attr('x', 20)
+          .attr('y', 10)
+          .attr('text-anchor', 'start')
+          .attr('fill', '#b0bec5')
+          .style('font-size', '12px')
+          .text(item.label);
+      });
+    }
+    
+    // Add title to center
+    g.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('fill', '#ffffff')
+      .style('font-size', '14px')
+      .style('font-weight', 'bold')
+      .text('Sentiment Distribution');
   };
   
-  useEffect(() => {
-    if (!svgRef.current || !data || data.length === 0) return;
-    
-    const margin = { top: 20, right: 30, bottom: 30, left: 40 };
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
-    
+  // Create a bar chart showing sentiment scores
+  const createBarChart = () => {
     const svg = d3.select(svgRef.current);
-    svg.selectAll('*').remove();
     
-    const g = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
+    // Set dimensions
+    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
     
-    // Process dates if they're strings
-    const processedData = data.map(d => ({
-      ...d,
-      date: d.date instanceof Date ? d.date : new Date(d.date)
-    }));
+    // Create group for the chart
+    const g = svg
+      .append('g')
+      .attr('transform', `translate(${margin.left}, ${margin.top})`);
     
-    // Sort data by date
-    processedData.sort((a, b) => a.date.getTime() - b.date.getTime());
+    // Prepare data - we'll use the recent items with timestamps
+    const chartData = data.slice(0, 10).reverse();
     
-    // Set up scales
-    const xScale = d3.scaleTime()
-      .domain(d3.extent(processedData, d => d.date) as [Date, Date])
-      .range([0, innerWidth]);
+    // Create scales
+    const xScale = d3.scaleBand()
+      .domain(chartData.map((_, i) => i.toString()))
+      .range([0, chartWidth])
+      .padding(0.2);
     
     const yScale = d3.scaleLinear()
       .domain([0, 1])
-      .range([innerHeight, 0]);
+      .range([chartHeight, 0]);
     
     // Create axes
     const xAxis = d3.axisBottom(xScale)
-      .ticks(5)
-      .tickFormat(d3.timeFormat(timeFormat) as any);
+      .tickFormat((_, i) => `Item ${i + 1}`);
     
     const yAxis = d3.axisLeft(yScale)
       .ticks(5)
       .tickFormat(d => `${d * 100}%`);
     
-    // Add axes to chart
+    // Draw axes
     g.append('g')
-      .attr('transform', `translate(0,${innerHeight})`)
-      .call(xAxis);
+      .attr('transform', `translate(0, ${chartHeight})`)
+      .call(xAxis)
+      .selectAll('text')
+      .attr('transform', 'rotate(-45)')
+      .attr('text-anchor', 'end')
+      .attr('fill', '#b0bec5');
     
     g.append('g')
-      .call(yAxis);
+      .call(yAxis)
+      .selectAll('text')
+      .attr('fill', '#b0bec5');
+    
+    // Color scale for sentiments
+    const colorScale = d3.scaleOrdinal<string>()
+      .domain(['POSITIVE', 'NEGATIVE', 'NEUTRAL', 'MIXED'])
+      .range(['#00897b', '#d32f2f', '#757575', '#ff6f00']);
+    
+    // Draw bars for positive scores
+    g.selectAll('.bar-positive')
+      .data(chartData)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar-positive')
+      .attr('x', (d, i) => xScale(i.toString()) as number)
+      .attr('y', d => yScale(d.sentiment_scores.Positive))
+      .attr('width', xScale.bandwidth() / 4)
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Positive))
+      .attr('fill', colorScale('POSITIVE') as string)
+      .transition()
+      .duration(800)
+      .attr('y', d => yScale(d.sentiment_scores.Positive))
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Positive));
+    
+    // Draw bars for negative scores
+    g.selectAll('.bar-negative')
+      .data(chartData)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar-negative')
+      .attr('x', (d, i) => (xScale(i.toString()) as number) + xScale.bandwidth() / 4)
+      .attr('y', d => yScale(d.sentiment_scores.Negative))
+      .attr('width', xScale.bandwidth() / 4)
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Negative))
+      .attr('fill', colorScale('NEGATIVE') as string)
+      .transition()
+      .duration(800)
+      .attr('y', d => yScale(d.sentiment_scores.Negative))
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Negative));
+    
+    // Draw bars for neutral scores
+    g.selectAll('.bar-neutral')
+      .data(chartData)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar-neutral')
+      .attr('x', (d, i) => (xScale(i.toString()) as number) + 2 * xScale.bandwidth() / 4)
+      .attr('y', d => yScale(d.sentiment_scores.Neutral))
+      .attr('width', xScale.bandwidth() / 4)
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Neutral))
+      .attr('fill', colorScale('NEUTRAL') as string)
+      .transition()
+      .duration(800)
+      .attr('y', d => yScale(d.sentiment_scores.Neutral))
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Neutral));
+    
+    // Draw bars for mixed scores
+    g.selectAll('.bar-mixed')
+      .data(chartData)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar-mixed')
+      .attr('x', (d, i) => (xScale(i.toString()) as number) + 3 * xScale.bandwidth() / 4)
+      .attr('y', d => yScale(d.sentiment_scores.Mixed))
+      .attr('width', xScale.bandwidth() / 4)
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Mixed))
+      .attr('fill', colorScale('MIXED') as string)
+      .transition()
+      .duration(800)
+      .attr('y', d => yScale(d.sentiment_scores.Mixed))
+      .attr('height', d => chartHeight - yScale(d.sentiment_scores.Mixed));
+    
+    // Add a legend if requested
+    if (showLegend) {
+      const legend = svg
+        .append('g')
+        .attr('transform', `translate(${chartWidth - 60}, 20)`);
+      
+      const legendItems = [
+        { label: 'Pos', color: '#00897b' },
+        { label: 'Neg', color: '#d32f2f' },
+        { label: 'Neu', color: '#757575' },
+        { label: 'Mix', color: '#ff6f00' }
+      ];
+      
+      legendItems.forEach((item, i) => {
+        const legendItem = legend
+          .append('g')
+          .attr('transform', `translate(0, ${i * 20})`);
+        
+        legendItem
+          .append('rect')
+          .attr('width', 10)
+          .attr('height', 10)
+          .attr('fill', item.color);
+        
+        legendItem
+          .append('text')
+          .attr('x', 15)
+          .attr('y', 8)
+          .attr('text-anchor', 'start')
+          .attr('fill', '#b0bec5')
+          .style('font-size', '10px')
+          .text(item.label);
+      });
+    }
+  };
+  
+  // Create a line chart showing sentiment trend over time
+  const createLineChart = () => {
+    const svg = d3.select(svgRef.current);
+    
+    // Set dimensions
+    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
+    
+    // Create group for the chart
+    const g = svg
+      .append('g')
+      .attr('transform', `translate(${margin.left}, ${margin.top})`);
+    
+    // Prepare data - sort by timestamp
+    const chartData = [...data]
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(-10); // Last 10 items
+    
+    // Create scales
+    const xScale = d3.scalePoint()
+      .domain(chartData.map((_, i) => i.toString()))
+      .range([0, chartWidth]);
+    
+    const yScale = d3.scaleLinear()
+      .domain([0, 1])
+      .range([chartHeight, 0]);
+    
+    // Create axes
+    const xAxis = d3.axisBottom(xScale)
+      .tickFormat((_, i) => {
+        const date = new Date(chartData[i].timestamp);
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+      });
+    
+    const yAxis = d3.axisLeft(yScale)
+      .ticks(5)
+      .tickFormat(d => `${d * 100}%`);
+    
+    // Draw axes
+    g.append('g')
+      .attr('transform', `translate(0, ${chartHeight})`)
+      .call(xAxis)
+      .selectAll('text')
+      .attr('fill', '#b0bec5');
+    
+    g.append('g')
+      .call(yAxis)
+      .selectAll('text')
+      .attr('fill', '#b0bec5');
     
     // Create line generators
-    const createLine = (accessor: (d: SentimentDataPoint) => number) => {
-      return d3.line<SentimentDataPoint>()
-        .x(d => xScale(d.date))
-        .y(d => yScale(accessor(d)))
+    const createLine = (scoreAccessor: (d: AnalysisResult) => number) => {
+      return d3.line<AnalysisResult>()
+        .x((_, i) => xScale(i.toString()) as number)
+        .y(d => yScale(scoreAccessor(d)))
         .curve(d3.curveMonotoneX);
     };
     
-    // Add line paths
-    const sentimentTypes = [
-      { key: 'positive', label: 'Positive' },
-      { key: 'neutral', label: 'Neutral' },
-      { key: 'negative', label: 'Negative' },
-    ];
-
-    if (processedData[0].overall !== undefined) {
-      sentimentTypes.push({ key: 'overall', label: 'Overall' });
-    }
+    // Draw positive line
+    const positiveLine = createLine(d => d.sentiment_scores.Positive);
+    const positiveLineChart = g.append('path')
+      .datum(chartData)
+      .attr('fill', 'none')
+      .attr('stroke', '#00897b')
+      .attr('stroke-width', 2)
+      .attr('d', positiveLine);
     
-    sentimentTypes.forEach(type => {
-      if (processedData[0][type.key] !== undefined) {
-        g.append('path')
-          .datum(processedData)
-          .attr('fill', 'none')
-          .attr('stroke', colors[type.key])
-          .attr('stroke-width', type.key === 'overall' ? 3 : 2)
-          .attr('stroke-linejoin', 'round')
-          .attr('stroke-linecap', 'round')
-          .attr('d', createLine(d => d[type.key]));
-      }
-    });
+    // Animate the line drawing
+    const positiveLength = positiveLineChart.node()?.getTotalLength() || 0;
+    positiveLineChart
+      .attr('stroke-dasharray', positiveLength)
+      .attr('stroke-dashoffset', positiveLength)
+      .transition()
+      .duration(1000)
+      .attr('stroke-dashoffset', 0);
     
-    // Create a tooltip
-    const tooltip = tooltipRef.current;
+    // Draw negative line
+    const negativeLine = createLine(d => d.sentiment_scores.Negative);
+    const negativeLineChart = g.append('path')
+      .datum(chartData)
+      .attr('fill', 'none')
+      .attr('stroke', '#d32f2f')
+      .attr('stroke-width', 2)
+      .attr('d', negativeLine);
     
-    if (tooltip) {
-      // Create overlay for mouse events
-      const overlay = g.append('rect')
-        .attr('width', innerWidth)
-        .attr('height', innerHeight)
-        .attr('fill', 'none')
-        .attr('pointer-events', 'all');
+    // Animate the line drawing
+    const negativeLength = negativeLineChart.node()?.getTotalLength() || 0;
+    negativeLineChart
+      .attr('stroke-dasharray', negativeLength)
+      .attr('stroke-dashoffset', negativeLength)
+      .transition()
+      .duration(1000)
+      .delay(200)
+      .attr('stroke-dashoffset', 0);
+    
+    // Add a legend if requested
+    if (showLegend) {
+      const legend = svg
+        .append('g')
+        .attr('transform', `translate(${chartWidth - 80}, 20)`);
       
-      // Create a vertical line for the tooltip
-      const tooltipLine = g.append('line')
-        .attr('stroke', '#999')
-        .attr('stroke-width', 1)
-        .attr('stroke-dasharray', '3,3')
-        .attr('y1', 0)
-        .attr('y2', innerHeight)
-        .style('opacity', 0);
+      const legendItems = [
+        { label: 'Positive', color: '#00897b' },
+        { label: 'Negative', color: '#d32f2f' },
+      ];
       
-      // Add circles for data points
-      const circles = sentimentTypes.map(type => {
-        return g.append('circle')
-          .attr('r', 4)
-          .attr('fill', colors[type.key])
-          .attr('stroke', '#fff')
-          .attr('stroke-width', 2)
-          .style('opacity', 0);
+      legendItems.forEach((item, i) => {
+        const legendItem = legend
+          .append('g')
+          .attr('transform', `translate(0, ${i * 20})`);
+        
+        legendItem
+          .append('line')
+          .attr('x1', 0)
+          .attr('y1', 5)
+          .attr('x2', 15)
+          .attr('y2', 5)
+          .attr('stroke', item.color)
+          .attr('stroke-width', 2);
+        
+        legendItem
+          .append('text')
+          .attr('x', 20)
+          .attr('y', 9)
+          .attr('text-anchor', 'start')
+          .attr('fill', '#b0bec5')
+          .style('font-size', '12px')
+          .text(item.label);
       });
-      
-      // Mouse events
-      overlay
-        .on('mousemove', (event) => {
-          const [xPos] = d3.pointer(event);
-          const xDate = xScale.invert(xPos);
-          
-          // Find closest data point
-          const bisect = d3.bisector((d: SentimentDataPoint) => d.date).left;
-          const index = bisect(processedData, xDate, 1);
-          const dataPoint = processedData[index - 1];
-          
-          if (!dataPoint) return;
-          
-          // Update tooltip position
-          tooltip.style.display = 'block';
-          tooltip.style.left = `${event.offsetX + 15}px`;
-          tooltip.style.top = `${event.offsetY - 20}px`;
-          
-          // Update tooltip content
-          const formattedDate = d3.timeFormat(timeFormat)(dataPoint.date);
-          
-          tooltip.innerHTML = `
-            <div class="tooltip-title">${formattedDate}</div>
-            ${sentimentTypes.map(type => {
-              if (dataPoint[type.key] !== undefined) {
-                return `
-                  <div class="tooltip-row" style="--color: ${colors[type.key]}">
-                    <span>${type.label}</span>
-                    <span>${Math.round(dataPoint[type.key] * 100)}%</span>
-                  </div>
-                `;
-              }
-              return '';
-            }).join('')}
-          `;
-          
-          // Update tooltip line
-          tooltipLine
-            .attr('x1', xScale(dataPoint.date))
-            .attr('x2', xScale(dataPoint.date))
-            .style('opacity', 1);
-          
-          // Update circles
-          sentimentTypes.forEach((type, i) => {
-            if (dataPoint[type.key] !== undefined) {
-              circles[i]
-                .attr('cx', xScale(dataPoint.date))
-                .attr('cy', yScale(dataPoint[type.key]))
-                .style('opacity', 1);
-            }
-          });
-        })
-        .on('mouseleave', () => {
-          tooltip.style.display = 'none';
-          tooltipLine.style('opacity', 0);
-          circles.forEach(circle => circle.style('opacity', 0));
-        });
     }
-    
-  }, [data, width, height, timeFormat]);
+  };
+  
+  // If no data, show a message
+  if (!data || data.length === 0) {
+    return (
+      <ChartContainer className={className}>
+        <NoDataMessage>No data available for visualization</NoDataMessage>
+      </ChartContainer>
+    );
+  }
   
   return (
-    <div className={className}>
-      <ChartContainer width={width} height={height}>
-        <svg ref={svgRef} width={width} height={height}></svg>
-        <Tooltip ref={tooltipRef} />
-      </ChartContainer>
-      
-      {showLegend && (
-        <LegendContainer>
-          <LegendItem color={colors.positive}>Positive</LegendItem>
-          <LegendItem color={colors.neutral}>Neutral</LegendItem>
-          <LegendItem color={colors.negative}>Negative</LegendItem>
-          {data.length > 0 && data[0].overall !== undefined && (
-            <LegendItem color={colors.overall}>Overall</LegendItem>
-          )}
-        </LegendContainer>
-      )}
-    </div>
+    <ChartContainer className={className}>
+      <svg ref={svgRef} width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} />
+    </ChartContainer>
   );
 };
 
