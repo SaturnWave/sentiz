@@ -1,107 +1,120 @@
 import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { KeyPhrase } from '../../types/models';
 
-interface KeyPhraseCloudProps {
-  keyPhrases: KeyPhrase[];
+interface KeyPhraseTagProps {
+  text: string;
+  score: number;
+  onClick?: () => void;
+  highlighted?: boolean;
+  className?: string;
 }
 
-interface TagProps {
-  size: number;
-  color: string;
-}
-
-const Container = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.sm};
-  justify-content: center;
-  padding: ${({ theme }) => theme.spacing.md};
-  min-height: 150px;
-`;
-
-const Tag = styled(motion.div)<TagProps>`
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  background-color: ${({ color }) => color};
-  color: ${({ theme }) => theme.colors.text.primary};
+const TagContainer = styled(motion.div)<{ 
+  score: number; 
+  isHighlighted: boolean;
+  isClickable: boolean;
+}>`
+  display: inline-flex;
+  align-items: center;
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  margin: ${({ theme }) => theme.spacing.xs};
   border-radius: ${({ theme }) => theme.borders.radius.pill};
-  font-size: ${({ size }) => `${Math.max(0.8, Math.min(size, 1.5))}rem`};
-  display: inline-block;
-  margin: 0.25rem;
-  opacity: 0.9;
-  cursor: default;
-  transition: transform 0.3s, opacity 0.3s;
+  background-color: ${({ score, isHighlighted, theme }) => {
+    // Higher score = more saturated color
+    const baseColor = theme.colors.primary.main;
+    // If highlighted, use a higher opacity
+    const opacity = isHighlighted ? 0.3 : 0.15;
+    // Increase opacity based on score
+    const adjustedOpacity = opacity + (score * 0.3);
+    return `${baseColor}${Math.round(adjustedOpacity * 255).toString(16).padStart(2, '0')}`;
+  }};
+  font-size: ${({ score, theme }) => {
+    // Higher score = larger font
+    const baseSize = parseFloat(theme.typography.fontSizes.sm);
+    const maxIncrease = 0.2; // Maximum 20% increase
+    const increase = score * maxIncrease;
+    return `${baseSize * (1 + increase)}rem`;
+  }};
+  font-weight: ${({ score, theme }) => {
+    // Higher score = bolder text
+    return score > 0.7 
+      ? theme.typography.fontWeights.bold 
+      : score > 0.4 
+        ? theme.typography.fontWeights.medium 
+        : theme.typography.fontWeights.regular;
+  }};
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: ${({ isClickable }) => isClickable ? 'pointer' : 'default'};
+  transition: all 0.2s ease;
   
   &:hover {
-    opacity: 1;
-    transform: scale(1.05);
+    transform: ${({ isClickable }) => isClickable ? 'scale(1.05)' : 'none'};
+    background-color: ${({ score, isHighlighted, isClickable, theme }) => {
+      if (!isClickable) return '';
+      
+      const baseColor = theme.colors.primary.main;
+      const opacity = isHighlighted ? 0.4 : 0.25;
+      const adjustedOpacity = opacity + (score * 0.3);
+      return `${baseColor}${Math.round(adjustedOpacity * 255).toString(16).padStart(2, '0')}`;
+    }};
   }
 `;
 
-const EmptyMessage = styled.div`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-align: center;
-  width: 100%;
-  padding: ${({ theme }) => theme.spacing.lg};
+const ScoreBadge = styled.span<{ score: number }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-left: ${({ theme }) => theme.spacing.xs};
+  background-color: ${({ score, theme }) => {
+    return score > 0.7 
+      ? theme.colors.primary.main 
+      : theme.colors.primary.dark;
+  }};
+  color: ${({ theme }) => theme.colors.primary.contrastText};
+  font-size: ${({ theme }) => theme.typography.fontSizes.xs};
+  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
 `;
 
-const KeyPhraseCloud: React.FC<KeyPhraseCloudProps> = ({ keyPhrases }) => {
-  // Function to get a color based on score
-  const getColor = (score: number) => {
-    // Using a gradient from primary light to primary dark
-    const hue = 174; // Teal base (from theme colors)
-    const saturation = Math.round(score * 100);
-    const lightness = Math.max(40, 70 - score * 30); // Higher score = darker
-    
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-  };
-  
-  // Function to get a font size based on score
-  const getFontSize = (score: number) => {
-    // Score range is typically 0-1, scale to 0.8-1.5 for font size
-    return 0.8 + score * 0.7;
-  };
-  
-  // Animation variants for staggered appearance
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-      },
-    },
-  };
-  
-  const itemVariants = {
+const KeyPhraseTag: React.FC<KeyPhraseTagProps> = ({
+  text,
+  score,
+  onClick,
+  highlighted = false,
+  className,
+}) => {
+  // Animation variants
+  const variants = {
     hidden: { opacity: 0, scale: 0.8 },
     visible: { opacity: 1, scale: 1 },
+    hover: { scale: 1.05 },
   };
   
-  if (!keyPhrases || keyPhrases.length === 0) {
-    return (
-      <Container>
-        <EmptyMessage>No key phrases detected</EmptyMessage>
-      </Container>
-    );
-  }
+  // Format score for display (as percentage)
+  const displayScore = Math.round(score * 100);
   
   return (
-    <Container as={motion.div} variants={containerVariants} initial="hidden" animate="visible">
-      {keyPhrases.map((phrase, index) => (
-        <Tag
-          key={`${phrase.text}-${index}`}
-          size={getFontSize(phrase.score)}
-          color={getColor(phrase.score)}
-          variants={itemVariants}
-          title={`Relevance: ${Math.round(phrase.score * 100)}%`}
-        >
-          {phrase.text}
-        </Tag>
-      ))}
-    </Container>
+    <TagContainer
+      score={score}
+      isHighlighted={highlighted}
+      isClickable={!!onClick}
+      onClick={onClick}
+      className={className}
+      variants={variants}
+      initial="hidden"
+      animate="visible"
+      whileHover={onClick ? "hover" : undefined}
+      transition={{ duration: 0.2 }}
+    >
+      {text}
+      <ScoreBadge score={score}>
+        {displayScore}
+      </ScoreBadge>
+    </TagContainer>
   );
 };
 
-export default KeyPhraseCloud;
+export default KeyPhraseTag;

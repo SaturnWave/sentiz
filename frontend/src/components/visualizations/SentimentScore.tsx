@@ -1,100 +1,149 @@
 import React from 'react';
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 interface SentimentScoreProps {
-  score: number;
-  label?: string;
-  showValue?: boolean;
+  score: number; // Score between 0 and 1
+  sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED';
   size?: 'small' | 'medium' | 'large';
+  showValue?: boolean;
   className?: string;
 }
 
-const ScoreContainer = styled.div<{ size: string }>`
+// Container for the score gauge
+const GaugeContainer = styled.div<{ size: string }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.xs};
-  width: ${({ size }) => (size === 'small' ? '60px' : size === 'large' ? '120px' : '90px')};
+  justify-content: center;
+  width: ${({ size }) => 
+    size === 'small' ? '60px' : 
+    size === 'large' ? '120px' : '90px'};
+  height: ${({ size }) => 
+    size === 'small' ? '60px' : 
+    size === 'large' ? '120px' : '90px'};
+  position: relative;
 `;
 
-const ScoreIndicator = styled.div<{ score: number; size: string }>`
+// Main gauge circle
+const GaugeCircle = styled.div<{ size: string }>`
   width: 100%;
-  height: ${({ size }) => (size === 'small' ? '6px' : size === 'large' ? '12px' : '8px')};
-  border-radius: ${({ theme }) => theme.borders.radius.pill};
-  background: linear-gradient(
-    to right,
-    ${({ theme }) => theme.colors.sentiment.negative} 0%,
-    ${({ theme }) => theme.colors.sentiment.mixed} 50%,
-    ${({ theme }) => theme.colors.sentiment.positive} 100%
-  );
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
   position: relative;
   overflow: hidden;
 `;
 
-const ScoreMarker = styled.div<{ position: string; size: string }>`
+// Filled portion of the gauge
+const GaugeFill = styled(motion.div)<{ 
+  score: number; 
+  sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | 'MIXED';
+}>`
   position: absolute;
-  width: ${({ size }) => (size === 'small' ? '12px' : size === 'large' ? '24px' : '16px')};
-  height: ${({ size }) => (size === 'small' ? '12px' : size === 'large' ? '24px' : '16px')};
-  border-radius: 50%;
-  background-color: white;
-  border: 2px solid ${({ theme }) => theme.colors.background.primary};
-  left: ${({ position }) => position};
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: ${({ sentiment, theme }) => {
+    switch (sentiment) {
+      case 'POSITIVE':
+        return theme.colors.sentiment.positive;
+      case 'NEGATIVE':
+        return theme.colors.sentiment.negative;
+      case 'MIXED':
+        return theme.colors.sentiment.mixed;
+      default:
+        return theme.colors.sentiment.neutral;
+    }
+  }};
+  border-radius: 0 0 100px 100px;
+`;
+
+// Score text value
+const ScoreText = styled.div<{ size: string; sentiment: string }>`
+  position: absolute;
   top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: ${({ theme }) => theme.shadows.sm};
-  transition: left 0.5s ${({ theme }) => theme.animations.easings.easeInOut};
-`;
-
-const ScoreLabel = styled.div<{ size: string }>`
-  font-size: ${({ theme, size }) => 
-    size === 'small' ? theme.typography.fontSizes.xs : 
-    size === 'large' ? theme.typography.fontSizes.md : 
-    theme.typography.fontSizes.sm
-  };
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  text-align: center;
-`;
-
-const ScoreValue = styled.div<{ score: number; size: string }>`
-  font-size: ${({ theme, size }) => 
-    size === 'small' ? theme.typography.fontSizes.sm : 
-    size === 'large' ? theme.typography.fontSizes.lg : 
-    theme.typography.fontSizes.md
-  };
+  font-size: ${({ size }) => 
+    size === 'small' ? '14px' : 
+    size === 'large' ? '28px' : '20px'};
   font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  color: ${({ score, theme }) => {
-    if (score < 0.3) return theme.colors.sentiment.negative;
-    if (score < 0.6) return theme.colors.sentiment.mixed;
-    return theme.colors.sentiment.positive;
+  color: ${({ sentiment, theme }) => {
+    switch (sentiment) {
+      case 'POSITIVE':
+        return theme.colors.sentiment.positive;
+      case 'NEGATIVE':
+        return theme.colors.sentiment.negative;
+      case 'MIXED':
+        return theme.colors.sentiment.mixed;
+      default:
+        return theme.colors.sentiment.neutral;
+    }
+  }};
+`;
+
+// Sentiment label
+const SentimentLabel = styled.div<{ size: string; sentiment: string }>`
+  margin-top: ${({ theme }) => theme.spacing.xs};
+  font-size: ${({ size }) => 
+    size === 'small' ? '12px' : 
+    size === 'large' ? '16px' : '14px'};
+  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
+  color: ${({ sentiment, theme }) => {
+    switch (sentiment) {
+      case 'POSITIVE':
+        return theme.colors.sentiment.positive;
+      case 'NEGATIVE':
+        return theme.colors.sentiment.negative;
+      case 'MIXED':
+        return theme.colors.sentiment.mixed;
+      default:
+        return theme.colors.sentiment.neutral;
+    }
   }};
 `;
 
 const SentimentScore: React.FC<SentimentScoreProps> = ({
   score,
-  label = 'Sentiment',
-  showValue = true,
+  sentiment,
   size = 'medium',
+  showValue = true,
   className,
 }) => {
-  // Ensure score is between 0 and 1
-  const normalizedScore = Math.max(0, Math.min(1, score));
+  // Format score as percentage
+  const scorePercentage = Math.round(score * 100);
   
-  // Calculate the position for the marker (as a percentage)
-  const position = `${normalizedScore * 100}%`;
+  // Format sentiment for display
+  const formatSentiment = (sentiment: string): string => {
+    return sentiment.charAt(0) + sentiment.slice(1).toLowerCase();
+  };
+  
+  // Calculate height based on score
+  const fillHeight = `${scorePercentage}%`;
   
   return (
-    <ScoreContainer size={size} className={className}>
-      {label && <ScoreLabel size={size}>{label}</ScoreLabel>}
-      <ScoreIndicator score={normalizedScore} size={size}>
-        <ScoreMarker position={position} size={size} />
-      </ScoreIndicator>
-      {showValue && (
-        <ScoreValue score={normalizedScore} size={size}>
-          {(normalizedScore * 100).toFixed(0)}%
-        </ScoreValue>
-      )}
-    </ScoreContainer>
+    <div className={className}>
+      <GaugeContainer size={size}>
+        <GaugeCircle size={size}>
+          <GaugeFill
+            score={score}
+            sentiment={sentiment}
+            initial={{ height: '0%' }}
+            animate={{ height: fillHeight }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+          {showValue && (
+            <ScoreText size={size} sentiment={sentiment}>
+              {scorePercentage}%
+            </ScoreText>
+          )}
+        </GaugeCircle>
+      </GaugeContainer>
+      <SentimentLabel size={size} sentiment={sentiment}>
+        {formatSentiment(sentiment)}
+      </SentimentLabel>
+    </div>
   );
 };
 
