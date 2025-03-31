@@ -1,62 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store';
+import { toggleSidebar } from '../../features/ui/slices/uiSlice';
+import { logout } from '../../features/auth/slices/authSlice';
+import { NAV_ITEMS } from '../../routes/routes';
+import Button from '../atoms/Button';
 
-interface NavbarProps {
-  isAuthenticated?: boolean;
-  userName?: string;
-  onLogout?: () => void;
-  className?: string;
-}
-
-const NavContainer = styled.nav`
+const NavbarContainer = styled.nav`
+  background-color: ${({ theme }) => theme.colors.background.card};
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.lg}`};
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: ${({ theme }) => `${theme.spacing.md} ${theme.spacing.lg}`};
-  background-color: ${({ theme }) => theme.colors.background.card};
-  box-shadow: ${({ theme }) => theme.shadows.md};
   position: sticky;
   top: 0;
   z-index: ${({ theme }) => theme.zIndices.navigation};
+  backdrop-filter: blur(10px);
 `;
 
 const Logo = styled(Link)`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  text-decoration: none;
-  color: ${({ theme }) => theme.colors.primary.main};
-  font-size: ${({ theme }) => theme.typography.fontSizes.xl};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  transition: color 0.2s;
+  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
+  text-decoration: none;
   
   &:hover {
-    color: ${({ theme }) => theme.colors.primary.light};
+    text-decoration: none;
+    color: ${({ theme }) => theme.colors.primary.main};
   }
 `;
 
-const LogoText = styled.span`
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-`;
-
-const LogoSubtitle = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSizes.xs};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  letter-spacing: 1px;
-  text-transform: uppercase;
+const LogoIcon = styled.span`
+  font-size: 1.5rem;
+  margin-right: ${({ theme }) => theme.spacing.sm};
+  color: ${({ theme }) => theme.colors.primary.main};
 `;
 
 const NavLinks = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.md};
-
-  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
     display: none;
+  }
+`;
+
+const NavLink = styled(Link)<{ isActive: boolean }>`
+  color: ${({ isActive, theme }) => 
+    isActive ? theme.colors.primary.main : theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSizes.md};
+  text-decoration: none;
+  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    text-decoration: none;
+    color: ${({ theme }) => theme.colors.primary.main};
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%) scaleX(${({ isActive }) => (isActive ? 1 : 0)});
+    height: 2px;
+    width: 60%;
+    background-color: ${({ theme }) => theme.colors.primary.main};
+    transition: transform 0.2s ease;
+  }
+  
+  &:hover::after {
+    transform: translateX(-50%) scaleX(1);
   }
 `;
 
@@ -64,49 +89,12 @@ const MobileMenuButton = styled.button`
   display: none;
   background: none;
   border: none;
-  cursor: pointer;
   color: ${({ theme }) => theme.colors.text.primary};
-  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
+  font-size: 1.5rem;
+  cursor: pointer;
   
-  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
     display: block;
-  }
-  
-  &:focus {
-    outline: none;
-  }
-`;
-
-const NavLink = styled(Link)<{ active: boolean }>`
-  text-decoration: none;
-  color: ${({ active, theme }) => (active ? theme.colors.primary.main : theme.colors.text.primary)};
-  font-weight: ${({ active, theme }) => 
-    active ? theme.typography.fontWeights.bold : theme.typography.fontWeights.medium
-  };
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  position: relative;
-  transition: color 0.2s;
-  
-  &:hover {
-    color: ${({ theme }) => theme.colors.primary.main};
-  }
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: ${({ theme }) => theme.colors.primary.main};
-    transform: scaleX(${({ active }) => (active ? 1 : 0)});
-    transform-origin: left;
-    transition: transform 0.3s ease;
-  }
-  
-  &:hover::after {
-    transform: scaleX(1);
   }
 `;
 
@@ -116,238 +104,173 @@ const UserSection = styled.div`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-const UserName = styled.span`
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  
-  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
-    display: none;
-  }
-`;
-
-const UserAvatar = styled.div`
-  width: 32px;
-  height: 32px;
+const UserAvatar = styled.div<{ initials: string }>`
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: ${({ theme }) => theme.colors.primary.main};
+  background-color: ${({ theme }) => theme.colors.secondary.main};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme }) => theme.colors.primary.contrastText};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-`;
-
-const LogoutButton = styled.button`
-  background: none;
-  border: 1px solid ${({ theme }) => theme.colors.primary.main};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  color: ${({ theme }) => theme.colors.primary.main};
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.md}`};
+  color: ${({ theme }) => theme.colors.secondary.contrastText};
+  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
   cursor: pointer;
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  transition: all 0.2s;
+  transition: background-color 0.2s ease;
   
   &:hover {
-    background-color: ${({ theme }) => theme.colors.primary.main};
-    color: ${({ theme }) => theme.colors.primary.contrastText};
-  }
-  
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.3);
-  }
-  
-  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
-    display: none;
+    background-color: ${({ theme }) => theme.colors.secondary.dark};
   }
 `;
 
-const MobileMenu = styled(motion.div)`
-  display: none;
-  position: fixed;
-  top: 60px;
-  left: 0;
-  right: 0;
-  background-color: ${({ theme }) => theme.colors.background.card};
-  padding: ${({ theme }) => theme.spacing.md};
+const UserMenu = styled(motion.div)`
+  position: absolute;
+  top: 100%;
+  right: ${({ theme }) => theme.spacing.lg};
+  margin-top: ${({ theme }) => theme.spacing.xs};
+  background-color: ${({ theme }) => theme.colors.background.elevated};
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: ${({ theme }) => theme.shadows.lg};
-  z-index: ${({ theme }) => theme.zIndices.navigation - 1};
-  
-  @media (max-width: ${({ theme }) => theme.breakpoints.sm}) {
-    display: flex;
-    flex-direction: column;
-    gap: ${({ theme }) => theme.spacing.md};
-  }
+  width: 200px;
+  z-index: ${({ theme }) => theme.zIndices.dropdown};
+  overflow: hidden;
 `;
 
-const MobileNavLink = styled(Link)<{ active: boolean }>`
-  text-decoration: none;
-  color: ${({ active, theme }) => (active ? theme.colors.primary.main : theme.colors.text.primary)};
-  font-weight: ${({ active, theme }) => 
-    active ? theme.typography.fontWeights.bold : theme.typography.fontWeights.medium
-  };
-  padding: ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.background.secondary};
-  }
-`;
-
-const MobileLogoutButton = styled.button`
-  background-color: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.primary.main};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
-  color: ${({ theme }) => theme.colors.primary.main};
-  padding: ${({ theme }) => theme.spacing.md};
-  margin-top: ${({ theme }) => theme.spacing.md};
+const UserMenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  border: none;
+  background: none;
+  color: ${({ theme }) => theme.colors.text.primary};
   cursor: pointer;
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  transition: all 0.2s;
-  text-align: center;
+  transition: background-color 0.2s ease;
   
   &:hover {
-    background-color: ${({ theme }) => theme.colors.primary.main};
-    color: ${({ theme }) => theme.colors.primary.contrastText};
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 `;
 
-const Navbar: React.FC<NavbarProps> = ({
-  isAuthenticated = false,
-  userName = '',
-  onLogout,
-  className,
-}) => {
+const Navbar: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isUserMenuOpen) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
+  
+  // Get user initials for avatar
+  const getUserInitials = (): string => {
+    if (!user || !user.username) return '?';
+    
+    const parts = user.username.split(' ');
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
   
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
+  // Handle sidebar toggle
+  const handleSidebarToggle = () => {
+    dispatch(toggleSidebar());
   };
   
-  const getUserInitials = (name: string) => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    if (names.length === 1) return names[0].charAt(0).toUpperCase();
-    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+  // Handle logout
+  const handleLogout = () => {
+    dispatch(logout());
   };
   
   return (
-    <NavContainer className={className}>
-      <Logo to="/">
-        <LogoText>
-          CloudML
-          <LogoSubtitle>Text Analysis</LogoSubtitle>
-        </LogoText>
-      </Logo>
+    <NavbarContainer>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <MobileMenuButton onClick={handleSidebarToggle}>
+          ☰
+        </MobileMenuButton>
+        
+        <Logo to="/dashboard">
+          <LogoIcon>📊</LogoIcon>
+          <span>SentimentScope</span>
+        </Logo>
+      </div>
       
-      {isAuthenticated && (
-        <>
-          <NavLinks>
-            <NavLink to="/dashboard" active={location.pathname === '/dashboard'}>
-              Dashboard
-            </NavLink>
-            <NavLink to="/analysis" active={location.pathname === '/analysis'}>
-              Text Analysis
-            </NavLink>
-            <NavLink to="/batch" active={location.pathname === '/batch'}>
-              Batch Processing
-            </NavLink>
-            <NavLink to="/tts" active={location.pathname === '/tts'}>
-              Text to Speech
-            </NavLink>
-            <NavLink to="/history" active={location.pathname === '/history'}>
-              History
-            </NavLink>
-          </NavLinks>
-          
-          <UserSection>
-            <UserInfo>
-              <UserName>Hi, {userName}</UserName>
-              <UserAvatar>{getUserInitials(userName)}</UserAvatar>
-            </UserInfo>
-            <LogoutButton onClick={onLogout}>Logout</LogoutButton>
-            <MobileMenuButton onClick={toggleMobileMenu}>
-              {isMobileMenuOpen ? '✕' : '☰'}
-            </MobileMenuButton>
-          </UserSection>
-          
-          <AnimatePresence>
-            {isMobileMenuOpen && (
-              <MobileMenu
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
+      <NavLinks>
+        {NAV_ITEMS.filter(item => item.showInNav).map((item) => (
+          <NavLink 
+            key={item.path} 
+            to={item.path}
+            isActive={location.pathname === item.path}
+          >
+            {item.navLabel || item.title}
+          </NavLink>
+        ))}
+      </NavLinks>
+      
+      <UserSection>
+        {isAuthenticated ? (
+          <>
+            <UserAvatar 
+              initials={getUserInitials()}
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            >
+              {getUserInitials()}
+            </UserAvatar>
+            
+            {isUserMenuOpen && (
+              <UserMenu
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
               >
-                <MobileNavLink 
-                  to="/dashboard" 
-                  active={location.pathname === '/dashboard'}
-                  onClick={closeMobileMenu}
-                >
-                  Dashboard
-                </MobileNavLink>
-                <MobileNavLink 
-                  to="/analysis" 
-                  active={location.pathname === '/analysis'}
-                  onClick={closeMobileMenu}
-                >
-                  Text Analysis
-                </MobileNavLink>
-                <MobileNavLink 
-                  to="/batch" 
-                  active={location.pathname === '/batch'}
-                  onClick={closeMobileMenu}
-                >
-                  Batch Processing
-                </MobileNavLink>
-                <MobileNavLink 
-                  to="/tts" 
-                  active={location.pathname === '/tts'}
-                  onClick={closeMobileMenu}
-                >
-                  Text to Speech
-                </MobileNavLink>
-                <MobileNavLink 
-                  to="/history" 
-                  active={location.pathname === '/history'}
-                  onClick={closeMobileMenu}
-                >
-                  History
-                </MobileNavLink>
-                <MobileLogoutButton onClick={onLogout}>
+                <UserMenuItem as={Link} to="/settings">
+                  Settings
+                </UserMenuItem>
+                <UserMenuItem onClick={handleLogout}>
                   Logout
-                </MobileLogoutButton>
-              </MobileMenu>
+                </UserMenuItem>
+              </UserMenu>
             )}
-          </AnimatePresence>
-        </>
-      )}
-      
-      {!isAuthenticated && (
-        <NavLinks>
-          <NavLink to="/login" active={location.pathname === '/login'}>
-            Login
-          </NavLink>
-          <NavLink to="/register" active={location.pathname === '/register'}>
-            Register
-          </NavLink>
-        </NavLinks>
-      )}
-    </NavContainer>
+          </>
+        ) : (
+          <>
+            <Button 
+              as={Link} 
+              to="/login"
+              variant="outlined"
+              size="small"
+            >
+              Login
+            </Button>
+            <Button 
+              as={Link} 
+              to="/register"
+              size="small"
+            >
+              Register
+            </Button>
+          </>
+        )}
+      </UserSection>
+    </NavbarContainer>
   );
 };
 

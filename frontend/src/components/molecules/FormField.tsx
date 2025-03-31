@@ -1,228 +1,213 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
-import { TypographyProps, TypographyVariant } from '../../types/components';
+import styled from 'styled-components';
+import Input from '../atoms/Input';
+import { FormFieldProps } from '../../types/components';
 
-// Helper function to get the component based on variant
-const getComponent = (variant: TypographyVariant): string => {
-  switch (variant) {
-    case 'h1':
-    case 'h2':
-    case 'h3':
-    case 'h4':
-    case 'h5':
-    case 'h6':
-      return variant;
-    case 'subtitle1':
-    case 'subtitle2':
-      return 'h6';
-    case 'body1':
-    case 'body2':
-      return 'p';
-    case 'button':
-      return 'span';
-    case 'caption':
-      return 'span';
-    case 'overline':
-      return 'span';
-    default:
-      return 'p';
+const FormFieldWrapper = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+`;
+
+const Label = styled.label<{ hasError?: boolean }>`
+  display: block;
+  font-size: ${({ theme }) => theme.typography.fontSizes.md};
+  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
+  color: ${({ hasError, theme }) => 
+    hasError ? '#f44336' : theme.colors.text.primary};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+`;
+
+const TextArea = styled.textarea<{ hasError?: boolean }>`
+  width: 100%;
+  min-height: 100px;
+  padding: ${({ theme }) => theme.spacing.md};
+  background-color: ${({ theme }) => theme.colors.background.card};
+  border: 1px solid ${({ hasError, theme }) => 
+    hasError ? '#f44336' : 'rgba(100, 255, 218, 0.2)'};
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-family: ${({ theme }) => theme.typography.fontFamily};
+  font-size: ${({ theme }) => theme.typography.fontSizes.md};
+  resize: vertical;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: ${({ hasError, theme }) => 
+      hasError ? '#f44336' : theme.colors.primary.main};
+    box-shadow: 0 0 0 2px ${({ hasError, theme }) => 
+      hasError ? 'rgba(244, 67, 54, 0.1)' : 'rgba(100, 255, 218, 0.1)'};
   }
-};
-
-// Common styles for all typography variants
-const commonStyles = css<{
-  color?: 'primary' | 'secondary' | 'textPrimary' | 'textSecondary' | 'error';
-  align?: 'left' | 'center' | 'right';
-  gutterBottom?: boolean;
-  noWrap?: boolean;
-  paragraph?: boolean;
-}>`
-  margin: 0;
   
-  ${({ color, theme }) => {
-    switch (color) {
-      case 'primary':
-        return css`color: ${theme.colors.primary.main};`;
-      case 'secondary':
-        return css`color: ${theme.colors.secondary.main};`;
-      case 'textPrimary':
-        return css`color: ${theme.colors.text.primary};`;
-      case 'textSecondary':
-        return css`color: ${theme.colors.text.secondary};`;
-      case 'error':
-        return css`color: #f44336;`;
-      default:
-        return '';
-    }
-  }}
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.text.disabled};
+  }
   
-  ${({ align }) =>
-    align &&
-    css`
-      text-align: ${align};
-    `}
-  
-  ${({ gutterBottom, theme }) =>
-    gutterBottom &&
-    css`
-      margin-bottom: ${theme.spacing.md};
-    `}
-  
-  ${({ noWrap }) =>
-    noWrap &&
-    css`
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    `}
-  
-  ${({ paragraph, theme }) =>
-    paragraph &&
-    css`
-      margin-bottom: ${theme.spacing.md};
-    `}
+  &:disabled {
+    background-color: rgba(255, 255, 255, 0.05);
+    cursor: not-allowed;
+    color: ${({ theme }) => theme.colors.text.disabled};
+  }
 `;
 
-// Styled components for each variant
-const H1 = styled.h1`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.xxxl};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  line-height: ${({ theme }) => theme.typography.lineHeights.tight};
-`;
-
-const H2 = styled.h2`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.xxl};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  line-height: ${({ theme }) => theme.typography.lineHeights.tight};
-`;
-
-const H3 = styled.h3`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.xl};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
-  line-height: ${({ theme }) => theme.typography.lineHeights.tight};
-`;
-
-const H4 = styled.h4`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.lg};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-`;
-
-const H5 = styled.h5`
-  ${commonStyles}
+const Select = styled.select<{ hasError?: boolean }>`
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  background-color: ${({ theme }) => theme.colors.background.card};
+  border: 1px solid ${({ hasError, theme }) => 
+    hasError ? '#f44336' : 'rgba(100, 255, 218, 0.2)'};
+  border-radius: ${({ theme }) => theme.borders.radius.md};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-family: ${({ theme }) => theme.typography.fontFamily};
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: ${({ hasError, theme }) => 
+      hasError ? '#f44336' : theme.colors.primary.main};
+    box-shadow: 0 0 0 2px ${({ hasError, theme }) => 
+      hasError ? 'rgba(244, 67, 54, 0.1)' : 'rgba(100, 255, 218, 0.1)'};
+  }
+  
+  &:disabled {
+    background-color: rgba(255, 255, 255, 0.05);
+    cursor: not-allowed;
+    color: ${({ theme }) => theme.colors.text.disabled};
+  }
+  
+  option {
+    background-color: ${({ theme }) => theme.colors.background.elevated};
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
 `;
 
-const H6 = styled.h6`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
+const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
-const Subtitle1 = styled.h6`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
+const Checkbox = styled.input`
+  margin-right: ${({ theme }) => theme.spacing.sm};
+  cursor: pointer;
+  
+  &:disabled {
+    cursor: not-allowed;
+  }
 `;
 
-const Subtitle2 = styled.h6`
-  ${commonStyles}
+const Radio = styled.input`
+  margin-right: ${({ theme }) => theme.spacing.sm};
+  cursor: pointer;
+  
+  &:disabled {
+    cursor: not-allowed;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: #f44336;
   font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
+  margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
-const Body1 = styled.p`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-`;
-
-const Body2 = styled.p`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.sm};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-`;
-
-const Button = styled.span`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const Caption = styled.span`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-`;
-
-const Overline = styled.span`
-  ${commonStyles}
-  font-size: ${({ theme }) => theme.typography.fontSizes.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
-  line-height: ${({ theme }) => theme.typography.lineHeights.normal};
-  text-transform: uppercase;
-  letter-spacing: 1px;
-`;
-
-// Component map for rendering the correct component based on variant
-const components = {
-  h1: H1,
-  h2: H2,
-  h3: H3,
-  h4: H4,
-  h5: H5,
-  h6: H6,
-  subtitle1: Subtitle1,
-  subtitle2: Subtitle2,
-  body1: Body1,
-  body2: Body2,
-  button: Button,
-  caption: Caption,
-  overline: Overline,
-};
-
-const Typography: React.FC<TypographyProps> = ({
-  variant = 'body1',
-  color,
-  align,
-  gutterBottom = false,
-  noWrap = false,
-  paragraph = false,
-  children,
+const FormField: React.FC<FormFieldProps> = ({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  disabled = false,
+  required = false,
+  name,
+  id,
+  error = false,
+  errorMessage,
+  options,
   className,
-  ...props
 }) => {
-  // Get the component based on variant
-  const Component = components[variant];
+  // Generate a unique ID if none provided
+  const fieldId = id || `field-${name}-${Math.random().toString(36).substring(2, 9)}`;
   
   return (
-    <Component
-      color={color}
-      align={align}
-      gutterBottom={gutterBottom}
-      noWrap={noWrap}
-      paragraph={paragraph}
-      className={className}
-      {...props}
-    >
-      {children}
-    </Component>
+    <FormFieldWrapper className={className}>
+      {label && (
+        <Label htmlFor={fieldId} hasError={error}>
+          {label}
+          {required && <span style={{ color: '#f44336' }}> *</span>}
+        </Label>
+      )}
+      
+      {type === 'textarea' ? (
+        <TextArea
+          id={fieldId}
+          name={name}
+          value={value as string}
+          onChange={onChange as any}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          hasError={error}
+        />
+      ) : type === 'select' ? (
+        <Select
+          id={fieldId}
+          name={name}
+          value={value as string}
+          onChange={onChange as any}
+          disabled={disabled}
+          required={required}
+          hasError={error}
+        >
+          {options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      ) : type === 'checkbox' ? (
+        <CheckboxContainer>
+          <Checkbox
+            id={fieldId}
+            name={name}
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={onChange as any}
+            disabled={disabled}
+            required={required}
+          />
+          {label}
+        </CheckboxContainer>
+      ) : type === 'radio' ? (
+        <CheckboxContainer>
+          <Radio
+            id={fieldId}
+            name={name}
+            type="radio"
+            checked={Boolean(value)}
+            onChange={onChange as any}
+            disabled={disabled}
+            required={required}
+          />
+          {label}
+        </CheckboxContainer>
+      ) : (
+        <Input
+          id={fieldId}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          error={error}
+          autoComplete={type === 'password' ? 'current-password' : undefined}
+        />
+      )}
+      
+      {error && errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
+    </FormFieldWrapper>
   );
 };
 
-export default Typography;
+export default FormField;
