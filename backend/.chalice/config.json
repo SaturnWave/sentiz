@@ -9,7 +9,9 @@
         "BUCKET_NAME": "social-media-sentiment-analyzer-bucket",
         "ANALYSIS_TABLE_NAME": "sentiment-analysis-records",
         "BATCH_TABLE_NAME": "sentiment-batch-jobs",
-        "REGION": "us-east-1"
+        "REGION": "us-east-1",
+        "USER_POOL_ID": "mock-pool-id",
+        "USER_POOL_CLIENT_ID": "mock-client-id"
       },
       "autogen_policy": true
     }

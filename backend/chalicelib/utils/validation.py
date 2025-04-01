@@ -100,6 +100,50 @@ def validate_batch_start_request(body: Dict[str, Any]) -> bool:
          return False
     return True
 
+def validate_batch_request(body: Dict[str, Any]) -> bool:
+    """
+    Validates the request body for batch processing job creation.
+    
+    Expected format:
+    {
+        "user_id": "string",
+        "name": "string",
+        "data": [
+            {"text": "string", "id": "string"},
+            ...
+        ]
+    }
+    """
+    if not isinstance(body, dict):
+        return False
+        
+    # Check for user_id (optional in some cases)
+    if 'user_id' in body and not isinstance(body.get('user_id'), str):
+        return False
+        
+    # Check job name if provided
+    if 'name' in body and not isinstance(body.get('name'), str):
+        return False
+        
+    # Validate data array - this is required
+    data = body.get('data')
+    if not isinstance(data, list) or len(data) == 0:
+        return False
+        
+    # Validate each item in the data array
+    for item in data:
+        if not isinstance(item, dict):
+            return False
+            
+        # Each item must have text
+        if 'text' not in item or not isinstance(item['text'], str) or not item['text'].strip():
+            return False
+            
+        # ID is optional but must be a string if present
+        if 'id' in item and not isinstance(item['id'], str):
+            return False
+            
+    return True
 
 def validate_tts_request(query_params: Dict[str, Any]) -> bool:
     """
