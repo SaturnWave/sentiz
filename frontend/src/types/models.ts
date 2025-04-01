@@ -19,15 +19,15 @@ export interface KeyPhrase {
 
 // Analysis result
 export interface AnalysisResult {
-  analysis_id: string;
-  user_id: string;
-  text_length: number;
-  source: string;
-  timestamp: string;
+  id: string;
+  text: string;
+  text_sample?: string;
   sentiment: SentimentType;
   sentiment_scores: SentimentScores;
-  key_phrases: KeyPhrase[];
-  text_sample: string;
+  key_phrases: string[];
+  timestamp: string;
+  analysis_id: string;
+  source?: string;
 }
 
 // Batch job status
@@ -60,6 +60,18 @@ export interface BatchResult {
   timestamp: string;
 }
 
+// Batch analysis job
+export interface BatchAnalysisJob {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  filename: string;
+  created_at: string;
+  completed_at?: string;
+  records_processed?: number;
+  total_records?: number;
+  result_url?: string;
+}
+
 // User profile
 export interface UserProfile {
   userId: string;
@@ -78,6 +90,15 @@ export interface UserSettings {
   videoType: 'particles' | 'waves' | 'gradient' | 'none';
   videoIntensity: number;
   textToSpeechVoice: string;
+}
+
+// User
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  created_at: string;
+  last_login?: string;
 }
 
 // Theme-related types

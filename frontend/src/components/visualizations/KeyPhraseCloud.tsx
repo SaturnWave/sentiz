@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import KeyPhraseTag from './KeyPhraseTag';
 
+// Update the KeyPhrase interface to make text the only required property
 interface KeyPhrase {
   text: string;
   score?: number; // Optional score between 0 and 1 representing importance
 }
 
 interface KeyPhraseCloudProps {
-  phrases: KeyPhrase[];
+  phrases: KeyPhrase[] | string[];
   maxPhrases?: number;
   onPhraseClick?: (phrase: KeyPhrase) => void;
   colorScheme?: 'default' | 'rainbow' | 'blueGreen' | 'redBlue';
@@ -21,9 +22,8 @@ const CloudContainer = styled.div`
   justify-content: center;
   align-items: center;
   padding: ${props => props.theme.spacing.md};
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.theme.colors.background.paper};
-  box-shadow: ${props => props.theme.shadows.sm};
+  border-radius: ${props => props.theme.borders.radius.md};
+  background-color: rgba(0, 0, 0, 0.1);
   max-width: 100%;
   overflow: hidden;
 `;
@@ -73,6 +73,21 @@ const getTagSize = (score?: number): 'sm' | 'md' | 'lg' => {
   return 'md';
 };
 
+// Convert string array to KeyPhrase array if needed
+const normalizeKeyPhrases = (phrases: KeyPhrase[] | string[]): KeyPhrase[] => {
+  if (phrases.length === 0) return [];
+  
+  // Check if the first element is a string (indicating string[])
+  if (typeof phrases[0] === 'string') {
+    return (phrases as string[]).map(text => ({
+      text,
+      score: undefined,
+    }));
+  }
+  
+  return phrases as KeyPhrase[];
+};
+
 const KeyPhraseCloud: React.FC<KeyPhraseCloudProps> = ({
   phrases,
   maxPhrases = 50,
@@ -84,8 +99,11 @@ const KeyPhraseCloud: React.FC<KeyPhraseCloudProps> = ({
   const [displayPhrases, setDisplayPhrases] = useState<KeyPhrase[]>([]);
   
   useEffect(() => {
+    // Convert strings to KeyPhrase objects if needed
+    const normalizedPhrases = normalizeKeyPhrases(phrases);
+    
     // Sort phrases by score (if available) and limit to maxPhrases
-    const sortedPhrases = [...phrases].sort((a, b) => {
+    const sortedPhrases = [...normalizedPhrases].sort((a, b) => {
       if (a.score !== undefined && b.score !== undefined) {
         return b.score - a.score; // Higher scores first
       }

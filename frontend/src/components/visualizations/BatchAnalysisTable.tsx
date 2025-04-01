@@ -10,7 +10,8 @@ import {
   TablePagination,
   Chip,
   IconButton,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import { 
   Check as CheckIcon, 
@@ -203,7 +204,7 @@ const BatchAnalysisTable: React.FC<BatchAnalysisTableProps> = ({
                             <CheckIcon fontSize="small" />
                           ) : job.status === 'failed' ? (
                             <CloseIcon fontSize="small" />
-                          ) : null
+                          ) : undefined
                         }
                       />
                     </TableCell>
@@ -291,8 +292,5 @@ const BatchAnalysisTable: React.FC<BatchAnalysisTableProps> = ({
     </div>
   );
 };
-
-// Add missing CircularProgress component
-import { CircularProgress } from '@mui/material';
 
 export default BatchAnalysisTable;

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { RootState } from '../../store';
+import { RootState } from '../../../store';
 
 export interface AnalysisResult {
   id: string;
@@ -15,6 +15,19 @@ export interface AnalysisResult {
   entities?: Array<{ id: string; text: string; type: string; score?: number }>;
   language?: string;
   createdAt: string;
+  analysis_id: string;
+  user_id: string;
+  text_length: number;
+  source: string;
+  timestamp: string;
+  sentiment_scores: {
+    Positive: number;
+    Negative: number;
+    Neutral: number;
+    Mixed: number;
+  };
+  key_phrases: Array<{ text: string; score: number }>;
+  text_sample: string;
 }
 
 interface AnalysisState {
@@ -24,6 +37,8 @@ interface AnalysisState {
   isAnalyzing: boolean;
   uploadProgress: number;
   error: string | null;
+  currentText: string;
+  source: string;
 }
 
 const initialState: AnalysisState = {
@@ -33,6 +48,8 @@ const initialState: AnalysisState = {
   isAnalyzing: false,
   uploadProgress: 0,
   error: null,
+  currentText: '',
+  source: 'direct_input',
 };
 
 export const analyzeText = createAsyncThunk(
@@ -64,6 +81,33 @@ export const analyzeText = createAsyncThunk(
       return data;
     } catch (error) {
       return rejectWithValue((error as Error).message || 'Failed to analyze text');
+    }
+  }
+);
+
+export const analyzeSentiment = createAsyncThunk(
+  'analysis/analyzeSentiment',
+  async ({ text, source }: { text: string; source: string }, { rejectWithValue }) => {
+    try {
+      // Implementation would typically call an API
+      // Simplified for this example
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text, source }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return rejectWithValue(errorData.error || 'Failed to analyze sentiment');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message || 'Failed to analyze sentiment');
     }
   }
 );
@@ -207,6 +251,12 @@ const analysisSlice = createSlice({
     setUploadProgress: (state, action: PayloadAction<number>) => {
       state.uploadProgress = action.payload;
     },
+    setText: (state, action: PayloadAction<string>) => {
+      state.currentText = action.payload;
+    },
+    setSource: (state, action: PayloadAction<string>) => {
+      state.source = action.payload;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -273,6 +323,19 @@ const analysisSlice = createSlice({
       .addCase(fetchRecentAnalysis.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      // Analyze Sentiment
+      .addCase(analyzeSentiment.pending, (state) => {
+        state.isAnalyzing = true;
+        state.error = null;
+      })
+      .addCase(analyzeSentiment.fulfilled, (state, action) => {
+        state.isAnalyzing = false;
+        state.result = action.payload;
+      })
+      .addCase(analyzeSentiment.rejected, (state, action) => {
+        state.isAnalyzing = false;
+        state.error = action.payload as string;
       });
   },
 });
@@ -281,7 +344,9 @@ export const {
   clearAnalysisError, 
   clearResult, 
   setIsAnalyzing, 
-  setUploadProgress 
+  setUploadProgress,
+  setText,
+  setSource
 } = analysisSlice.actions;
 
 export const selectAnalysisResult = (state: RootState) => state.analysis.result;

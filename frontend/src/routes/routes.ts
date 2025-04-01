@@ -1,14 +1,14 @@
 // Route definitions
 export enum RouteKeys {
-  HOME = 'home',
-  DASHBOARD = 'dashboard',
-  ANALYSIS = 'analysis',
-  BATCH = 'batch',
-  HISTORY = 'history',
-  SETTINGS = 'settings',
-  LOGIN = 'login',
-  REGISTER = 'register',
-  NOT_FOUND = 'notFound',
+  HOME = 'HOME',
+  DASHBOARD = 'DASHBOARD',
+  ANALYSIS = 'ANALYSIS',
+  BATCH = 'BATCH',
+  HISTORY = 'HISTORY',
+  SETTINGS = 'SETTINGS',
+  LOGIN = 'LOGIN',
+  REGISTER = 'REGISTER',
+  NOT_FOUND = 'NOT_FOUND',
 }
 
 export interface RouteConfig {

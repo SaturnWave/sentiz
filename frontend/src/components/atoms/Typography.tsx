@@ -29,18 +29,21 @@ const getComponent = (variant: TypographyVariant): string => {
   }
 };
 
+// Using $ prefix for transient props to avoid DOM attribute conflicts
+interface StyledTypographyProps {
+  $color?: 'primary' | 'secondary' | 'textPrimary' | 'textSecondary' | 'error';
+  $align?: 'left' | 'center' | 'right';
+  $gutterBottom?: boolean;
+  $noWrap?: boolean;
+  $paragraph?: boolean;
+}
+
 // Common styles for all typography variants
-const commonStyles = css<{
-  color?: 'primary' | 'secondary' | 'textPrimary' | 'textSecondary' | 'error';
-  align?: 'left' | 'center' | 'right';
-  gutterBottom?: boolean;
-  noWrap?: boolean;
-  paragraph?: boolean;
-}>`
+const commonStyles = css<StyledTypographyProps>`
   margin: 0;
   
-  ${({ color, theme }) => {
-    switch (color) {
+  ${({ $color, theme }) => {
+    switch ($color) {
       case 'primary':
         return css`color: ${theme.colors.primary.main};`;
       case 'secondary':
@@ -56,105 +59,105 @@ const commonStyles = css<{
     }
   }}
   
-  ${({ align }) =>
-    align &&
+  ${({ $align }) =>
+    $align &&
     css`
-      text-align: ${align};
+      text-align: ${$align};
     `}
   
-  ${({ gutterBottom, theme }) =>
-    gutterBottom &&
+  ${({ $gutterBottom, theme }) =>
+    $gutterBottom &&
     css`
       margin-bottom: ${theme.spacing.md};
     `}
   
-  ${({ noWrap }) =>
-    noWrap &&
+  ${({ $noWrap }) =>
+    $noWrap &&
     css`
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     `}
   
-  ${({ paragraph, theme }) =>
-    paragraph &&
+  ${({ $paragraph, theme }) =>
+    $paragraph &&
     css`
       margin-bottom: ${theme.spacing.md};
     `}
 `;
 
 // Styled components for each variant
-const H1 = styled.h1`
+const H1 = styled.h1<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.xxxl};
   font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
   line-height: ${({ theme }) => theme.typography.lineHeights.tight};
 `;
 
-const H2 = styled.h2`
+const H2 = styled.h2<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.xxl};
   font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
   line-height: ${({ theme }) => theme.typography.lineHeights.tight};
 `;
 
-const H3 = styled.h3`
+const H3 = styled.h3<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.xl};
   font-weight: ${({ theme }) => theme.typography.fontWeights.bold};
   line-height: ${({ theme }) => theme.typography.lineHeights.tight};
 `;
 
-const H4 = styled.h4`
+const H4 = styled.h4<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.lg};
   font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const H5 = styled.h5`
+const H5 = styled.h5<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
   font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const H6 = styled.h6`
+const H6 = styled.h6<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
   font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const Subtitle1 = styled.h6`
+const Subtitle1 = styled.h6<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
   font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const Subtitle2 = styled.h6`
+const Subtitle2 = styled.h6<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const Body1 = styled.p`
+const Body1 = styled.p<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
   font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const Body2 = styled.p`
+const Body2 = styled.p<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.sm};
   font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const Button = styled.span`
+const Button = styled.span<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
   font-weight: ${({ theme }) => theme.typography.fontWeights.medium};
@@ -163,14 +166,14 @@ const Button = styled.span`
   letter-spacing: 0.5px;
 `;
 
-const Caption = styled.span`
+const Caption = styled.span<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
   line-height: ${({ theme }) => theme.typography.lineHeights.normal};
 `;
 
-const Overline = styled.span`
+const Overline = styled.span<StyledTypographyProps>`
   ${commonStyles}
   font-size: ${({ theme }) => theme.typography.fontSizes.xs};
   font-weight: ${({ theme }) => theme.typography.fontWeights.regular};
@@ -210,13 +213,14 @@ const Typography: React.FC<TypographyProps> = ({
   // Get the component based on variant
   const Component = components[variant];
   
+  // Use $ prefix for props to avoid DOM attribute conflicts
   return (
     <Component
-      color={color}
-      align={align}
-      gutterBottom={gutterBottom}
-      noWrap={noWrap}
-      paragraph={paragraph}
+      $color={color}
+      $align={align}
+      $gutterBottom={gutterBottom}
+      $noWrap={noWrap}
+      $paragraph={paragraph}
       className={className}
       {...props}
     >

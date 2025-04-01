@@ -128,16 +128,16 @@ const ResultsVisualization: React.FC<ResultsVisualizationProps> = ({
           )}
         </SentimentSummary>
         
-        <TextSample>"{result.text_sample}"</TextSample>
+        <TextSample>"{result.text_sample || result.text.substring(0, 200)}"</TextSample>
         
         <MetaInfo>
           <MetaItem>
             <span>Source:</span>
-            <strong>{result.source}</strong>
+            <strong>{result.source || 'Direct Input'}</strong>
           </MetaItem>
           <MetaItem>
             <span>Text Length:</span>
-            <strong>{result.text_length} characters</strong>
+            <strong>{result.text.length} characters</strong>
           </MetaItem>
           <MetaItem>
             <span>Analyzed:</span>
@@ -167,7 +167,7 @@ const ResultsVisualization: React.FC<ResultsVisualizationProps> = ({
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           <SectionTitle>Key Phrases</SectionTitle>
-          <KeyPhraseCloud keyPhrases={result.key_phrases} />
+          <KeyPhraseCloud phrases={result.key_phrases} />
         </Section>
       </VisualizationsContainer>
     </Container>

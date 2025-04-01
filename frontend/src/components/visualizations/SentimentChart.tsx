@@ -41,32 +41,9 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
   className,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  
-  // Render chart when data or dimensions change
-  useEffect(() => {
-    if (!data || data.length === 0 || !svgRef.current) return;
-    
-    // Clear any existing chart
-    d3.select(svgRef.current).selectAll('*').remove();
-    
-    // Create the appropriate chart based on type
-    switch (type) {
-      case 'pie':
-        createPieChart();
-        break;
-      case 'bar':
-        createBarChart();
-        break;
-      case 'line':
-        createLineChart();
-        break;
-      default:
-        createPieChart();
-    }
-  }, [data, type, height, width]);
-  
-  // Create a pie chart showing sentiment distribution
-  const createPieChart = () => {
+
+  // Memoize chart creation functions to avoid dependency issues
+  const createPieChart = React.useCallback(() => {
     const svg = d3.select(svgRef.current);
     
     // Set dimensions
@@ -125,10 +102,10 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
       .attr('stroke-width', 1)
       .transition()
       .duration(800)
-      .attrTween('d', function(d) {
+      .attrTween('d', function(d: d3.PieArcDatum<any>) {
         const interpolate = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
-        return function(t) {
-          return arc(interpolate(t));
+        return function(t: number) {
+          return arc(interpolate(t)) || '';
         };
       });
     
@@ -188,10 +165,9 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
       .style('font-size', '14px')
       .style('font-weight', 'bold')
       .text('Sentiment Distribution');
-  };
+  }, [data, height, width, showLegend]);
   
-  // Create a bar chart showing sentiment scores
-  const createBarChart = () => {
+  const createBarChart = React.useCallback(() => {
     const svg = d3.select(svgRef.current);
     
     // Set dimensions
@@ -223,7 +199,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
     
     const yAxis = d3.axisLeft(yScale)
       .ticks(5)
-      .tickFormat(d => `${d * 100}%`);
+      .tickFormat((d: d3.NumberValue) => `${(d.valueOf() * 100).toFixed(0)}%`);
     
     // Draw axes
     g.append('g')
@@ -342,10 +318,9 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
           .text(item.label);
       });
     }
-  };
+  }, [data, height, width, showLegend]);
   
-  // Create a line chart showing sentiment trend over time
-  const createLineChart = () => {
+  const createLineChart = React.useCallback(() => {
     const svg = d3.select(svgRef.current);
     
     // Set dimensions
@@ -381,7 +356,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
     
     const yAxis = d3.axisLeft(yScale)
       .ticks(5)
-      .tickFormat(d => `${d * 100}%`);
+      .tickFormat((d: d3.NumberValue) => `${(d.valueOf() * 100).toFixed(0)}%`);
     
     // Draw axes
     g.append('g')
@@ -475,8 +450,30 @@ const SentimentChart: React.FC<SentimentChartProps> = ({
           .text(item.label);
       });
     }
-  };
+  }, [data, height, width, showLegend]);
   
+  useEffect(() => {
+    if (!data || data.length === 0 || !svgRef.current) return;
+    
+    // Clear any existing chart
+    d3.select(svgRef.current).selectAll('*').remove();
+    
+    // Create the appropriate chart based on type
+    switch (type) {
+      case 'pie':
+        createPieChart();
+        break;
+      case 'bar':
+        createBarChart();
+        break;
+      case 'line':
+        createLineChart();
+        break;
+      default:
+        createPieChart();
+    }
+  }, [data, type, createPieChart, createBarChart, createLineChart]);
+
   // If no data, show a message
   if (!data || data.length === 0) {
     return (

@@ -1,18 +1,6 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
-
-export type ButtonVariant = 'primary' | 'secondary' | 'outlined' | 'text';
-export type ButtonSize = 'small' | 'medium' | 'large';
-
-interface ButtonProps {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  fullWidth?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  className?: string;
-  children: React.ReactNode;
-}
+import { ButtonProps, ButtonVariant, ButtonSize } from '../../types/components';
 
 const StyledButton = styled.button<{
   variant: ButtonVariant;
@@ -27,6 +15,7 @@ const StyledButton = styled.button<{
   border-radius: ${({ theme }) => theme.borders.radius.md};
   cursor: pointer;
   transition: all ${({ theme }) => theme.animations.durations.normal} ${({ theme }) => theme.animations.easings.easeOut};
+  text-decoration: none;
   
   ${({ fullWidth }) => fullWidth && css`
     width: 100%;
@@ -133,7 +122,7 @@ const StyledButton = styled.button<{
   }
 `;
 
-const Button: React.FC<ButtonProps> = ({
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'medium',
   fullWidth = false,
@@ -141,17 +130,34 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   className,
   children,
-}) => (
-  <StyledButton
-    variant={variant}
-    size={size}
-    fullWidth={fullWidth}
-    disabled={disabled}
-    onClick={onClick}
-    className={className}
-  >
-    {children}
-  </StyledButton>
-);
+  as,
+  to,
+  type = 'button',
+  style,
+  ...restProps
+}, ref) => {
+  const Component = as || StyledButton;
+  
+  return (
+    <StyledButton
+      as={Component}
+      to={to}
+      variant={variant}
+      size={size}
+      fullWidth={fullWidth}
+      disabled={disabled}
+      onClick={onClick}
+      className={className}
+      type={type}
+      style={style}
+      ref={ref}
+      {...restProps}
+    >
+      {children}
+    </StyledButton>
+  );
+});
+
+Button.displayName = 'Button';
 
 export default Button;

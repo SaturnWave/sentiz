@@ -222,9 +222,11 @@ const History: React.FC = () => {
     
     // Apply search term filter
     if (searchTerm) {
-      result = result.filter(item => 
-        item.text_sample.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      result = result.filter(item => {
+        // Handle potentially undefined text_sample
+        const textToSearch = item.text_sample || item.text;
+        return textToSearch.toLowerCase().includes(searchTerm.toLowerCase());
+      });
     }
     
     // Apply sentiment filter
@@ -235,9 +237,9 @@ const History: React.FC = () => {
     }
     
     // Apply source filter
-    if (sourceFilter !== 'all') {
+    if (sourceFilter !== 'all' && sourceFilter) {
       result = result.filter(item => 
-        item.source.toLowerCase() === sourceFilter.toLowerCase()
+        item.source && item.source.toLowerCase() === sourceFilter.toLowerCase()
       );
     }
     
@@ -343,11 +345,11 @@ const History: React.FC = () => {
                 >
                   <ItemHeader>
                     <ItemTitle>Analysis #{item.analysis_id.slice(-6)}</ItemTitle>
-                    <ItemSource>{item.source}</ItemSource>
+                    {item.source && <ItemSource>{item.source}</ItemSource>}
                   </ItemHeader>
                   
                   <ItemContent>
-                    <TextSample>"{item.text_sample}"</TextSample>
+                    <TextSample>"{item.text_sample || item.text.substring(0, 100)}..."</TextSample>
                   </ItemContent>
                   
                   <ItemFooter>

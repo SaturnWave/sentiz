@@ -9,7 +9,7 @@ export type CardVariant = 'default' | 'gradient' | 'frosted';
 export type CardElevation = 'low' | 'medium' | 'high';
 
 // Input types
-export type InputType = 'text' | 'password' | 'email' | 'number' | 'tel' | 'url' | 'search';
+export type InputType = 'text' | 'password' | 'email' | 'number' | 'tel' | 'url' | 'search' | 'file';
 
 // Form field types
 export type FormFieldType = InputType | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file';
@@ -43,6 +43,9 @@ export interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   children: React.ReactNode;
   className?: string;
+  as?: any; // For using with router links
+  to?: string; // For router link destination
+  style?: React.CSSProperties; // For inline styles
 }
 
 // Input props interface
@@ -62,6 +65,8 @@ export interface InputProps {
   minLength?: number;
   pattern?: string;
   className?: string;
+  size?: 'small' | 'medium' | 'large';
+  fullWidth?: boolean;
 }
 
 // Typography props interface
@@ -80,7 +85,7 @@ export interface TypographyProps {
 export interface FormFieldProps {
   label?: string;
   type?: FormFieldType;
-  value: string | number;
+  value: string | number | boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -154,5 +159,5 @@ export interface SentimentGaugeProps {
 
 // Key phrase cloud props
 export interface KeyPhraseCloudProps {
-  keyPhrases: Array<{ text: string; score: number }>;
+  phrases: Array<{ text: string; score?: number }>;
 }

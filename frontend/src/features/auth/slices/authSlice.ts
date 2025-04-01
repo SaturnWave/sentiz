@@ -18,6 +18,7 @@ interface AuthState {
   error: string | null;
   needsConfirmation: boolean;
   userToConfirm: string | null;
+  token: string | null; // Adding token property to fix errors
 }
 
 // Auth async thunks
@@ -92,6 +93,7 @@ const initialState: AuthState = {
   error: null,
   needsConfirmation: false,
   userToConfirm: null,
+  token: null, // Initialize token as null
 };
 
 // Auth slice
@@ -105,14 +107,19 @@ const authSlice = createSlice({
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
       state.isAuthenticated = true;
+      state.token = action.payload.accessToken; // Set token when user is set
     },
     clearUser: (state) => {
       state.user = null;
       state.isAuthenticated = false;
+      state.token = null; // Clear token on logout
     },
     setNeedsConfirmation: (state, action: PayloadAction<{ needsConfirmation: boolean; userToConfirm: string | null }>) => {
       state.needsConfirmation = action.payload.needsConfirmation;
       state.userToConfirm = action.payload.userToConfirm;
+    },
+    setToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -198,6 +205,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setUser, clearUser, setNeedsConfirmation } = authSlice.actions;
+export const { clearError, setUser, clearUser, setNeedsConfirmation, setToken } = authSlice.actions;
 
 export default authSlice.reducer;

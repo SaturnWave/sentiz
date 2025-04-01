@@ -12,6 +12,7 @@ import { addToHistory } from '../features/history/slices/historySlice';
 import { AppDispatch, RootState } from '../store';
 import { FEATURES } from '../config/features';
 import { analyticsService, EventType } from '../services/analytics';
+import { AnalysisResult } from '../types/models';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -179,7 +180,7 @@ const Analysis: React.FC = () => {
             elevation="medium"
           >
             <ResultsVisualization 
-              result={result}
+              result={result as unknown as AnalysisResult}
               isTextToSpeechPlaying={textToSpeechPlaying}
             />
             

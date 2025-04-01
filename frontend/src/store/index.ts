@@ -9,6 +9,7 @@ import authReducer from '../features/auth/slices/authSlice';
 import uiReducer from '../features/ui/slices/uiSlice';
 import batchReducer from '../features/batch/slices/batchSlice';
 import historyReducer from '../features/history/slices/historySlice';
+import textToSpeechReducer from '../features/tts/slices/textToSpeechSlice';
 
 // Configure persist options
 const persistConfig = {
@@ -25,6 +26,7 @@ const rootReducer = combineReducers({
   ui: uiReducer,
   batch: batchReducer,
   history: historyReducer,
+  textToSpeech: textToSpeechReducer,
 });
 
 // Create persisted reducer

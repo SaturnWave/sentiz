@@ -104,6 +104,22 @@ const Radio = styled.input`
   }
 `;
 
+const FileInput = styled.input`
+  width: 100%;
+  padding: ${({ theme }) => theme.spacing.sm} 0;
+  color: ${({ theme }) => theme.colors.text.primary};
+  
+  &::-webkit-file-upload-button {
+    background: ${({ theme }) => theme.colors.primary.main};
+    color: ${({ theme }) => theme.colors.primary.contrastText};
+    border: none;
+    padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.md};
+    border-radius: ${({ theme }) => theme.borders.radius.sm};
+    margin-right: ${({ theme }) => theme.spacing.md};
+    cursor: pointer;
+  }
+`;
+
 const ErrorMessage = styled.div`
   color: #f44336;
   font-size: ${({ theme }) => theme.typography.fontSizes.sm};
@@ -128,82 +144,119 @@ const FormField: React.FC<FormFieldProps> = ({
   // Generate a unique ID if none provided
   const fieldId = id || `field-${name}-${Math.random().toString(36).substring(2, 9)}`;
   
+  // Determine if label should be shown next to or above the input
+  const showLabelAbove = type !== 'checkbox' && type !== 'radio';
+  
+  const renderField = () => {
+    switch(type) {
+      case 'textarea':
+        return (
+          <TextArea
+            id={fieldId}
+            name={name}
+            value={value as string}
+            onChange={onChange}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            hasError={error}
+          />
+        );
+        
+      case 'select':
+        return (
+          <Select
+            id={fieldId}
+            name={name}
+            value={value as string | number}
+            onChange={onChange}
+            disabled={disabled}
+            required={required}
+            hasError={error}
+          >
+            {options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        );
+        
+      case 'checkbox':
+        return (
+          <CheckboxContainer>
+            <Checkbox
+              id={fieldId}
+              name={name}
+              type="checkbox"
+              checked={Boolean(value)}
+              onChange={onChange}
+              disabled={disabled}
+              required={required}
+            />
+            {/* Label is rendered here when it's a checkbox */}
+            {label && <span>{label}</span>}
+          </CheckboxContainer>
+        );
+        
+      case 'radio':
+        return (
+          <CheckboxContainer>
+            <Radio
+              id={fieldId}
+              name={name}
+              type="radio"
+              checked={Boolean(value)}
+              onChange={onChange}
+              disabled={disabled}
+              required={required}
+            />
+            {/* Label is rendered here when it's a radio button */}
+            {label && <span>{label}</span>}
+          </CheckboxContainer>
+        );
+        
+      case 'file':
+        return (
+          <FileInput
+            id={fieldId}
+            name={name}
+            type="file"
+            onChange={onChange}
+            disabled={disabled}
+            required={required}
+          />
+        );
+        
+      default:
+        return (
+          <Input
+            id={fieldId}
+            name={name}
+            type={type}
+            value={value as string | number}
+            onChange={onChange}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            error={error}
+            errorMessage={errorMessage}
+            autoComplete={type === 'password' ? 'current-password' : undefined}
+          />
+        );
+    }
+  };
+  
   return (
     <FormFieldWrapper className={className}>
-      {label && (
+      {showLabelAbove && label && (
         <Label htmlFor={fieldId} hasError={error}>
           {label}
           {required && <span style={{ color: '#f44336' }}> *</span>}
         </Label>
       )}
       
-      {type === 'textarea' ? (
-        <TextArea
-          id={fieldId}
-          name={name}
-          value={value as string}
-          onChange={onChange as any}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          hasError={error}
-        />
-      ) : type === 'select' ? (
-        <Select
-          id={fieldId}
-          name={name}
-          value={value as string}
-          onChange={onChange as any}
-          disabled={disabled}
-          required={required}
-          hasError={error}
-        >
-          {options?.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
-      ) : type === 'checkbox' ? (
-        <CheckboxContainer>
-          <Checkbox
-            id={fieldId}
-            name={name}
-            type="checkbox"
-            checked={Boolean(value)}
-            onChange={onChange as any}
-            disabled={disabled}
-            required={required}
-          />
-          {label}
-        </CheckboxContainer>
-      ) : type === 'radio' ? (
-        <CheckboxContainer>
-          <Radio
-            id={fieldId}
-            name={name}
-            type="radio"
-            checked={Boolean(value)}
-            onChange={onChange as any}
-            disabled={disabled}
-            required={required}
-          />
-          {label}
-        </CheckboxContainer>
-      ) : (
-        <Input
-          id={fieldId}
-          name={name}
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          error={error}
-          autoComplete={type === 'password' ? 'current-password' : undefined}
-        />
-      )}
+      {renderField()}
       
       {error && errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}
     </FormFieldWrapper>

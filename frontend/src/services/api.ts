@@ -58,7 +58,9 @@ apiClient.interceptors.response.use(
     }
     
     // Generic error handling
-    const errorMessage = error.response?.data?.error || error.message || 'An unknown error occurred';
+    const errorMessage = error.response?.data && typeof error.response.data === 'object' 
+      ? (error.response.data as any).error 
+      : error.message || 'An unknown error occurred';
     
     // Return rejected promise
     return Promise.reject({

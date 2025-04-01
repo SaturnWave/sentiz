@@ -199,13 +199,12 @@ const AnalysisSummary: React.FC<AnalysisSummaryProps> = ({
 }) => {
   // Format metadata for display
   const formattedTimestamp = formatTimestamp(result.timestamp);
-  const textLength = result.text_length;
-  const sourceDisplay = result.source.charAt(0).toUpperCase() + result.source.slice(1);
-  
-  // Format sentiment for display
-  const formatSentiment = (sentiment: string): string => {
-    return sentiment.charAt(0) + sentiment.slice(1).toLowerCase();
-  };
+  // Handle text_length gracefully (adding a fallback)
+  const textLength = result.text?.length || 0;
+  // Handle potentially undefined source
+  const sourceDisplay = result.source ? 
+    `${result.source.charAt(0).toUpperCase()}${result.source.slice(1)}` : 
+    'Unknown Source';
   
   return (
     <Container
@@ -231,9 +230,12 @@ const AnalysisSummary: React.FC<AnalysisSummaryProps> = ({
               <span>{textLength} characters</span>
             </MetaItem>
             <MetaItem>
-              <SourceTag source={result.source}>
-                {sourceDisplay}
-              </SourceTag>
+              {/* Only render SourceTag if source exists */}
+              {result.source && (
+                <SourceTag source={result.source}>
+                  {sourceDisplay}
+                </SourceTag>
+              )}
             </MetaItem>
           </Metadata>
         </HeaderLeft>
@@ -256,7 +258,7 @@ const AnalysisSummary: React.FC<AnalysisSummaryProps> = ({
         <ContentSection>
           <SectionTitle>Analyzed Text</SectionTitle>
           <TextContent>
-            {result.text_sample}
+            {result.text_sample || result.text}
           </TextContent>
         </ContentSection>
       )}
@@ -300,10 +302,13 @@ const AnalysisSummary: React.FC<AnalysisSummaryProps> = ({
       
       <KeyPhrasesSection>
         <SectionTitle>Key Phrases</SectionTitle>
-        <KeyPhraseCloud keyPhrases={result.key_phrases} />
+        {/* Convert string[] to KeyPhrase[] by mapping to the expected format */}
+        <KeyPhraseCloud 
+          phrases={result.key_phrases.map(phrase => ({ text: phrase }))} 
+        />
       </KeyPhrasesSection>
       
-      {showTts && (
+      {showTts && result.text_sample && (
         <TTSSection>
           <SectionTitle>Text-to-Speech</SectionTitle>
           <TextToSpeech 

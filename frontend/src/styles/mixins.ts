@@ -1,4 +1,4 @@
-import { css } from 'styled-components';
+import { css, DefaultTheme } from 'styled-components';
 import { Theme } from '../types/theme';
 
 /**
@@ -61,7 +61,7 @@ export const srOnly = css`
  * Media query for mobile devices
  */
 export const mobile = (content: any) => css`
-  @media (max-width: ${({ theme }: { theme: Theme }) => theme.breakpoints.sm}) {
+  @media (max-width: ${(props) => props.theme.breakpoints.sm}) {
     ${content}
   }
 `;
@@ -70,8 +70,8 @@ export const mobile = (content: any) => css`
  * Media query for tablet devices
  */
 export const tablet = (content: any) => css`
-  @media (min-width: ${({ theme }: { theme: Theme }) => theme.breakpoints.sm}) and 
-         (max-width: ${({ theme }: { theme: Theme }) => theme.breakpoints.md}) {
+  @media (min-width: ${(props) => props.theme.breakpoints.sm}) and 
+         (max-width: ${(props) => props.theme.breakpoints.md}) {
     ${content}
   }
 `;
@@ -80,7 +80,7 @@ export const tablet = (content: any) => css`
  * Media query for desktop devices
  */
 export const desktop = (content: any) => css`
-  @media (min-width: ${({ theme }: { theme: Theme }) => theme.breakpoints.md}) {
+  @media (min-width: ${(props) => props.theme.breakpoints.md}) {
     ${content}
   }
 `;
@@ -89,7 +89,7 @@ export const desktop = (content: any) => css`
  * Media query for large desktop devices
  */
 export const largeDesktop = (content: any) => css`
-  @media (min-width: ${({ theme }: { theme: Theme }) => theme.breakpoints.lg}) {
+  @media (min-width: ${(props) => props.theme.breakpoints.lg}) {
     ${content}
   }
 `;
@@ -130,18 +130,18 @@ export const customScrollbar = (width = '8px', thumbColor?: string, trackColor?:
   }
   
   &::-webkit-scrollbar-track {
-    background: ${({ theme, trackColor: propTrackColor }: { theme: Theme; trackColor?: string }) => 
-      propTrackColor || trackColor || theme.colors.background.primary};
+    background: ${(props) => 
+      trackColor || props.theme.colors.background.primary};
   }
   
   &::-webkit-scrollbar-thumb {
-    background: ${({ theme, thumbColor: propThumbColor }: { theme: Theme; thumbColor?: string }) => 
-      propThumbColor || thumbColor || theme.colors.background.elevated};
-    border-radius: ${({ theme }: { theme: Theme }) => theme.borders.radius.pill};
+    background: ${(props) => 
+      thumbColor || props.theme.colors.background.elevated};
+    border-radius: ${(props) => props.theme.borders.radius.pill};
   }
   
   &::-webkit-scrollbar-thumb:hover {
-    background: ${({ theme }: { theme: Theme }) => theme.colors.primary.dark};
+    background: ${(props) => props.theme.colors.primary.dark};
   }
 `;
 
@@ -149,7 +149,7 @@ export const customScrollbar = (width = '8px', thumbColor?: string, trackColor?:
  * CSS for glass-like frosted background effect
  */
 export const glassEffect = (opacity = 0.7) => css`
-  background-color: ${({ theme }: { theme: Theme }) => `rgba(26, 26, 46, ${opacity})`};
+  background-color: rgba(26, 26, 46, ${opacity});
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 `;
@@ -158,7 +158,7 @@ export const glassEffect = (opacity = 0.7) => css`
  * CSS for box shadow with theme colors
  */
 export const boxShadow = (elevation: 'sm' | 'md' | 'lg' | 'xl' = 'md') => css`
-  box-shadow: ${({ theme }: { theme: Theme }) => theme.shadows[elevation]};
+  box-shadow: ${(props) => props.theme.shadows[elevation]};
 `;
 
 /**
@@ -178,8 +178,8 @@ export const gradientBorder = (width = '1px', opacity = 0.2) => css`
     padding: ${width};
     background: linear-gradient(
       135deg,
-      ${({ theme }: { theme: Theme }) => `${theme.colors.primary.main}${Math.round(opacity * 255).toString(16)}`},
-      ${({ theme }: { theme: Theme }) => `${theme.colors.secondary.main}${Math.round(opacity * 255).toString(16)}`}
+      ${(props) => `${props.theme.colors.primary.main}${Math.round(opacity * 255).toString(16)}`},
+      ${(props) => `${props.theme.colors.secondary.main}${Math.round(opacity * 255).toString(16)}`}
     );
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
@@ -224,8 +224,8 @@ export const floatingAnimation = (duration = '3s', distance = '10px') => css`
 export const textGradient = () => css`
   background: linear-gradient(
     135deg,
-    ${({ theme }: { theme: Theme }) => theme.colors.primary.light},
-    ${({ theme }: { theme: Theme }) => theme.colors.primary.main}
+    ${(props) => props.theme.colors.primary.light},
+    ${(props) => props.theme.colors.primary.main}
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -252,4 +252,4 @@ export const responsiveFontSize = (
   @media screen and (min-width: ${maxWidth}) {
     font-size: ${maxSize};
   }
-`;3
+`;

@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { useTheme } from '../../contexts/ThemeContext';
+import useTheme from '../../hooks/useTheme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 interface ParticleSystem {
@@ -50,13 +50,8 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
   const { theme } = useTheme();
   const isPowerSavingMode = useMediaQuery('(prefers-reduced-motion: reduce)');
   
-  // Don't render video background if in power saving mode or disabled
-  if (isPowerSavingMode || disabled) {
-    return null;
-  }
-  
   // Setup the canvas size
-  const setupCanvas = () => {
+  const setupCanvas = useCallback(() => {
     if (!canvasRef.current) return;
     
     const canvas = canvasRef.current;
@@ -64,10 +59,10 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
     
     canvas.width = parent.clientWidth;
     canvas.height = parent.clientHeight;
-  };
+  }, []);
   
   // Initialize particle system
-  const initParticleSystem = () => {
+  const initParticleSystem = useCallback(() => {
     if (!canvasRef.current) return;
     
     const canvas = canvasRef.current;
@@ -98,10 +93,10 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
       particles,
       count: particleCount,
     };
-  };
+  }, [intensity, customColors, theme.colors]);
   
   // Animation loop for particles
-  const animateParticles = () => {
+  const animateParticles = useCallback(() => {
     if (!canvasRef.current || !particleSystemRef.current) return;
     
     const canvas = canvasRef.current;
@@ -138,16 +133,20 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
     
     // Request next frame
     animationRef.current = requestAnimationFrame(animateParticles);
-  };
+  }, []);
   
   // Handle window resize
-  const handleResize = () => {
+  const handleResize = useCallback(() => {
     setupCanvas();
     // Reinitialize particles to match new canvas size
     initParticleSystem();
-  };
+  }, [setupCanvas, initParticleSystem]);
   
   useEffect(() => {
+    if (isPowerSavingMode || disabled) {
+      return;
+    }
+    
     // Initial setup
     setupCanvas();
     initParticleSystem();
@@ -165,7 +164,12 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, [type, intensity, colorScheme, customColors]);
+  }, [isPowerSavingMode, disabled, setupCanvas, initParticleSystem, animateParticles, handleResize]);
+  
+  // Don't render video background if in power saving mode or disabled
+  if (isPowerSavingMode || disabled) {
+    return null;
+  }
   
   return <Canvas ref={canvasRef} />;
 };

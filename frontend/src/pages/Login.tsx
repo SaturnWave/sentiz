@@ -80,8 +80,8 @@ const Login: React.FC = () => {
   // Redirect if user is already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const { from } = (location.state as { from?: string }) || { from: '/dashboard' };
-      navigate(from, { replace: true });
+      const { from } = (location.state as { from?: Location }) || { from: { pathname: '/dashboard' } };
+      navigate(from?.pathname || '/dashboard');
     }
     
     // Redirect to confirmation if needed
