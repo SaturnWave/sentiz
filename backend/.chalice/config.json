@@ -1,0 +1,17 @@
+{
+  "version": "2.0",
+  "app_name": "cloud-machine-learning-project",
+  "stages": {
+    "dev": {
+      "api_gateway_stage": "api",
+      "environment_variables": {
+        "STAGE": "dev",
+        "BUCKET_NAME": "social-media-sentiment-analyzer-bucket",
+        "ANALYSIS_TABLE_NAME": "sentiment-analysis-records",
+        "BATCH_TABLE_NAME": "sentiment-batch-jobs",
+        "REGION": "us-east-1"
+      },
+      "autogen_policy": true
+    }
+  }
+}
